@@ -1,0 +1,72 @@
+{
+  "status": "Watch",
+  "current_class": "Moderate",
+  "current_confidence": 0.8380502193163515,
+  "class_probabilities": {
+    "Moderate": 0.8380502193163515,
+    "Normal": 0.12627837054335594,
+    "Severe": 0.03567141014029251
+  },
+  "forecast_pct_of_normal": 48.93319757796527,
+  "forecast_note": "Forecast suggests continued/worsening deficit \u2014 no near-term relief expected",
+  "ndvi_date": "2026-08-13",
+  "lst_date": "2026-08-21",
+  "rain_soil_date": "2026-07-01",
+  "current_vector": {
+    "ndvi_anomaly_z": -2.531227682149963,
+    "vci": 16.337864410529313,
+    "rainfall_mm": 94.26852147731678,
+    "rain_anomaly_z": -1.187407666360498,
+    "spi_1": -1.1635573923915215,
+    "spi_3": -1.5923529187661345,
+    "spi_12": 0.0021673654279982923,
+    "lst_anomaly_z": -1.596607845217007,
+    "soil_anomaly_z": -1.9651738311466502,
+    "rain_anomaly_z_lag1": -0.8217589532454807,
+    "spi_1_lag1": -1.078299707754628,
+    "spi_3_lag1": 0.10934742362538293,
+    "soil_anomaly_z_lag1": -0.9961589785616877,
+    "ndvi_anomaly_z_lag1": -0.7408876664974678,
+    "soil_percentile": 4.0
+  },
+  "forecast_windows": {
+    "1_3_day_mm": 0.7666015625,
+    "4_7_day_mm": 7.0966796875,
+    "8_15_day_mm": 3.76953125,
+    "1_3_day_pct_normal": 16.12347217037556,
+    "4_7_day_pct_normal": 111.94516458164254,
+    "8_15_day_pct_normal": 29.730861103972767
+  },
+  "top_drivers": [
+    {
+      "feature": "rain_anomaly_z",
+      "coefficient": -1.273476673654897,
+      "value_z": -1.348326375383779
+    },
+    {
+      "feature": "ndvi_anomaly_z",
+      "coefficient": 1.1028071154693389,
+      "value_z": -2.8824413074555855
+    },
+    {
+      "feature": "rain_anomaly_z_lag1",
+      "coefficient": -0.5197725945884922,
+      "value_z": -0.9160869165667087
+    },
+    {
+      "feature": "lst_anomaly_z",
+      "coefficient": -0.5134790482448265,
+      "value_z": -2.549749542461503
+    },
+    {
+      "feature": "soil_anomaly_z",
+      "coefficient": 0.5076870285635139,
+      "value_z": -1.993102036081089
+    },
+    {
+      "feature": "spi_3",
+      "coefficient": 0.4250323086996575,
+      "value_z": -1.8399919657704882
+    }
+  ]
+}
