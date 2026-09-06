@@ -164,14 +164,14 @@ st.caption(
 )
 
 geojson = json.loads(grid.to_json())
-fig_map = px.choropleth_mapbox(
+fig_map = px.choropleth_map(
     grid,
     geojson=geojson,
     locations=grid.index,
     color="accuracy",
     color_continuous_scale="RdYlGn",
     range_color=(0.7, 1.0),
-    mapbox_style="carto-positron",
+    map_style="carto-positron",
     zoom=8.5,
     center={"lat": 12.1, "lon": 39.65},
     opacity=0.75,
