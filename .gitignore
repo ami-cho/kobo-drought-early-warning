@@ -1,0 +1,20 @@
+__pycache__/
+*.py[cod]
+*.ipynb_checkpoints/
+.ipynb_checkpoints
+venv/
+.env
+.DS_Store
+
+# Large raw boundary/grib data - keep out of git, documented in docs/DATA_SOURCES.md instead
+data/raw/*.geojson
+data/raw/*.grib2
+data/raw/*.grib2.*.idx
+!data/raw/.gitkeep
+
+# Model artifacts are lightweight pickles - fine to keep, but exclude anything oversized
+models/*.pkl.bak
+
+# Dashboard's own data copy (populated locally from data/processed + models + maps, not duplicated in git)
+dashboard/data/*
+!dashboard/data/.gitkeep
