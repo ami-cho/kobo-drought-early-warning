@@ -15,6 +15,4 @@ data/raw/*.grib2.*.idx
 # Model artifacts are lightweight pickles - fine to keep, but exclude anything oversized
 models/*.pkl.bak
 
-# Dashboard's own data copy (populated locally from data/processed + models + maps, not duplicated in git)
-dashboard/data/*
-!dashboard/data/.gitkeep
+
