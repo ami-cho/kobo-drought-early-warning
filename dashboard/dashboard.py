@@ -25,6 +25,8 @@ import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 
+from live_status import compute_live_status
+
 DATA_DIR = Path(__file__).parent / "data"
 
 st.set_page_config(
@@ -36,12 +38,6 @@ st.set_page_config(
 # ---------------------------------------------------------------
 # Load everything (cached so it only runs once per session)
 # ---------------------------------------------------------------
-@st.cache_data
-def load_status():
-    with open(DATA_DIR / "kobo_latest_status.json") as f:
-        return json.load(f)
-
-
 @st.cache_data
 def load_history():
     df = pd.read_csv(DATA_DIR / "kobo_dashboard_history.csv")
@@ -55,7 +51,6 @@ def load_grid():
 
 
 try:
-    status = load_status()
     history = load_history()
     grid = load_grid()
     data_missing = False
@@ -65,17 +60,41 @@ except FileNotFoundError as e:
 
 if data_missing:
     st.error(
-        "Dashboard data not found. Make sure the `data/` folder (exported from the "
-        "Colab notebook's Milestone 16 cells) sits alongside this file.\n\n"
-        f"Details: {missing_file}"
+        "Dashboard reference data not found. Make sure the `data/` folder sits "
+        f"alongside this file.\n\nDetails: {missing_file}"
     )
     st.stop()
+
+# Live status: computed fresh from Earth Engine + AIFS on each cache refresh.
+# Falls back to the last static export if the live pull fails for any reason
+# (network issue, GEE quota, AIFS temporarily unavailable) so the app never
+# just crashes for a visitor.
+try:
+    status = compute_live_status()
+    live_ok = True
+except Exception as e:
+    live_ok = False
+    live_error = str(e)
+    try:
+        with open(DATA_DIR / "kobo_latest_status.json") as f:
+            status = json.load(f)
+    except FileNotFoundError:
+        st.error(f"Live status computation failed and no fallback snapshot is available.\n\nDetails: {live_error}")
+        st.stop()
 
 # ---------------------------------------------------------------
 # Header
 # ---------------------------------------------------------------
 st.title("🌾 KOBO DROUGHT EARLY WARNING SYSTEM")
 st.caption("Raya Kobo Woreda, North Wollo Zone, Amhara Region, Ethiopia")
+
+if live_ok:
+    st.success(f"🟢 Live — recomputed from Earth Engine + ECMWF AIFS at {status.get('computed_at', 'unknown time')} (refreshes every 6 hours)")
+else:
+    st.warning(
+        f"🟡 Live computation unavailable right now, showing the last saved snapshot instead. "
+        f"({live_error})"
+    )
 
 # ---------------------------------------------------------------
 # Phase 26.3: Main status

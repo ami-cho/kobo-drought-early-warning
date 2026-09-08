@@ -1,0 +1,11 @@
+streamlit
+geopandas
+pandas
+numpy
+scipy
+plotly
+scikit-learn
+earthengine-api
+ecmwf-opendata
+cfgrib
+xarray
