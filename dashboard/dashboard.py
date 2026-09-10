@@ -316,7 +316,7 @@ with col_map:
     geojson = json.loads(grid.to_json())
 
     fig_map = go.Figure(
-        go.Choroplethmapbox(
+        go.Choroplethmap(
             geojson=geojson,
             locations=grid.index,
             z=grid["accuracy"],
@@ -333,9 +333,9 @@ with col_map:
         )
     )
     fig_map.update_layout(
-        mapbox_style="carto-darkmatter",
-        mapbox_zoom=8.3,
-        mapbox_center={"lat": 12.1, "lon": 39.65},
+        map_style="carto-darkmatter",
+        map_zoom=8.3,
+        map_center={"lat": 12.1, "lon": 39.65},
         paper_bgcolor=COLORS["surface"],
         plot_bgcolor=COLORS["surface"],
         margin={"r": 0, "t": 0, "l": 0, "b": 0},
