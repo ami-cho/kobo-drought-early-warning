@@ -315,32 +315,61 @@ with col_map:
     st.markdown('<div class="kobo-label">Spatial risk pattern</div>', unsafe_allow_html=True)
     geojson = json.loads(grid.to_json())
 
+    with open(DATA_DIR / "kobo_boundary.geojson") as f:
+        boundary_geojson = json.load(f)
+
     fig_map = go.Figure(
-        go.Choroplethmapbox(
+        go.Choroplethmap(
             geojson=geojson,
             locations=grid.index,
             z=grid["accuracy"],
-            colorscale=[[0, COLORS["clay"]], [0.5, COLORS["ochre"]], [1, COLORS["sage"]]],
+            customdata=grid.index,
+            colorscale=[
+                [0.0, COLORS["clay"]],
+                [0.35, "#A8683F"],
+                [0.6, COLORS["ochre"]],
+                [0.8, "#8FA377"],
+                [1.0, COLORS["sage"]],
+            ],
             zmin=0.70, zmax=0.95,
-            marker_opacity=0.85,
-            marker_line_width=1,
+            marker_opacity=0.80,
+            marker_line_width=0.6,
             marker_line_color=COLORS["bg"],
+            hovertemplate="<b>CELL %{customdata}</b><br>Accuracy: %{z:.3f}<extra></extra>",
             colorbar=dict(
-                title=dict(text="accuracy", font=dict(color=COLORS["text_muted"], size=10)),
-                tickfont=dict(color=COLORS["text_muted"], size=9),
-                thickness=12, len=0.7,
+                title=dict(text="ACCURACY", font=dict(color=COLORS["text_muted"], size=10, family="IBM Plex Mono")),
+                tickfont=dict(color=COLORS["text_muted"], size=9, family="IBM Plex Mono"),
+                thickness=10, len=0.65, outlinewidth=0,
             ),
         )
     )
+
+    for feature in boundary_geojson["features"]:
+        geom = feature["geometry"]
+        polys = geom["coordinates"] if geom["type"] == "MultiPolygon" else [geom["coordinates"]]
+        for poly in polys:
+            for ring in poly:
+                lons = [pt[0] for pt in ring]
+                lats = [pt[1] for pt in ring]
+                fig_map.add_trace(go.Scattermap(
+                    lon=lons, lat=lats, mode="lines",
+                    line=dict(width=2, color=COLORS["text"]),
+                    opacity=0.55, hoverinfo="skip", showlegend=False,
+                ))
+
     fig_map.update_layout(
-        mapbox_style="carto-darkmatter",
-        mapbox_zoom=8.3,
-        mapbox_center={"lat": 12.1, "lon": 39.65},
+        map_style="carto-darkmatter",
+        map_zoom=8.4,
+        map_center={"lat": 12.1, "lon": 39.65},
         paper_bgcolor=COLORS["surface"],
         plot_bgcolor=COLORS["surface"],
         margin={"r": 0, "t": 0, "l": 0, "b": 0},
-        height=380,
+        height=400,
         font=dict(family="Space Grotesk", color=COLORS["text_muted"]),
+        hoverlabel=dict(
+            bgcolor=COLORS["surface"], bordercolor=COLORS["rule"],
+            font=dict(family="IBM Plex Mono", size=11, color=COLORS["text"]),
+        ),
     )
     st.plotly_chart(fig_map, use_container_width=True, config={"displayModeBar": False})
     st.markdown(
@@ -412,9 +441,28 @@ st.markdown('<hr class="kobo-rule">', unsafe_allow_html=True)
 # EXPLAINABILITY
 # =================================================================
 st.markdown('<div class="kobo-label">What\'s driving this prediction</div>', unsafe_allow_html=True)
+FEATURE_LABELS = {
+    "ndvi_anomaly_z": "NDVI anomaly",
+    "vci": "VCI",
+    "rainfall_mm": "Rainfall",
+    "rain_anomaly_z": "Rainfall anomaly",
+    "spi_1": "SPI-1",
+    "spi_3": "SPI-3",
+    "spi_12": "SPI-12",
+    "lst_anomaly_z": "LST anomaly",
+    "soil_anomaly_z": "Soil moisture anomaly",
+    "soil_percentile": "Soil moisture percentile",
+    "rain_anomaly_z_lag1": "Rainfall anomaly (prev. month)",
+    "spi_1_lag1": "SPI-1 (prev. month)",
+    "spi_3_lag1": "SPI-3 (prev. month)",
+    "soil_anomaly_z_lag1": "Soil moisture anomaly (prev. month)",
+    "ndvi_anomaly_z_lag1": "NDVI anomaly (prev. month)",
+}
+
 drivers = status.get("top_drivers", [])
 if drivers:
     drivers_df = pd.DataFrame(drivers)
+    drivers_df["feature"] = drivers_df["feature"].map(lambda f: FEATURE_LABELS.get(f, f))
     drivers_df["contribution"] = drivers_df["coefficient"] * drivers_df["value_z"]
     drivers_df = drivers_df.sort_values("contribution")
 

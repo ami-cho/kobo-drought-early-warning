@@ -3,7 +3,7 @@ geopandas
 pandas
 numpy
 scipy
-plotly
+plotly>=5.24,<8
 scikit-learn
 earthengine-api
 ecmwf-opendata
