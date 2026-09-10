@@ -21,7 +21,7 @@ from live_status import compute_live_status
 DATA_DIR = Path(__file__).parent / "data"
 
 st.set_page_config(
-    page_title="Kobo Drought Early Warning",
+    page_title="Multi-Sensor Drought Early Warning System — Raya Kobo",
     page_icon="🌾",
     layout="wide",
     initial_sidebar_state="collapsed",
@@ -234,7 +234,7 @@ hero_html = f"""
       <div class="kobo-label" style="margin-bottom:0.9rem;">
         <span class="kobo-live-dot" style="background:{live_dot_color}"></span>{live_text}
       </div>
-      <h1 style="margin:0; font-size:2.3rem; line-height:1.15;">Kobo Drought<br/>Early Warning</h1>
+      <h1 style="margin:0; font-size:1.95rem; line-height:1.2;">Multi-Sensor Drought<br/>Early Warning System</h1>
       <p class="mono" style="color:{COLORS['text_muted']}; font-size:0.85rem; margin-top:0.8rem;">
         RAYA KOBO WOREDA &nbsp;·&nbsp; NORTH WOLLO ZONE &nbsp;·&nbsp; AMHARA, ETHIOPIA<br/>
         12.11°N &nbsp;39.65°E &nbsp;·&nbsp; 1930 km²
@@ -316,7 +316,7 @@ with col_map:
     geojson = json.loads(grid.to_json())
 
     fig_map = go.Figure(
-        go.Choroplethmap(
+        go.Choroplethmapbox(
             geojson=geojson,
             locations=grid.index,
             z=grid["accuracy"],
@@ -333,9 +333,9 @@ with col_map:
         )
     )
     fig_map.update_layout(
-        map_style="carto-darkmatter",
-        map_zoom=8.3,
-        map_center={"lat": 12.1, "lon": 39.65},
+        mapbox_style="carto-darkmatter",
+        mapbox_zoom=8.3,
+        mapbox_center={"lat": 12.1, "lon": 39.65},
         paper_bgcolor=COLORS["surface"],
         plot_bgcolor=COLORS["surface"],
         margin={"r": 0, "t": 0, "l": 0, "b": 0},
@@ -494,7 +494,7 @@ st.markdown('<hr class="kobo-rule">', unsafe_allow_html=True)
 st.markdown(
     f"""
     <div class="kobo-colophon">
-    KOBO DROUGHT EARLY WARNING SYSTEM — a portfolio project, not an official warning service.<br/>
+    MULTI-SENSOR DROUGHT EARLY WARNING SYSTEM — a portfolio project, not an official warning service.<br/>
     DATA — MODIS NDVI/LST · CHIRPS · ERA5-Land · ECMWF AIFS, via Google Earth Engine<br/>
     MODEL — logistic regression, validated against published North Wollo drought literature<br/>
     BUILD — Python · scikit-learn · Streamlit · Plotly

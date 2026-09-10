@@ -1,4 +1,4 @@
-# Kobo Drought Early Warning System
+# Multi-Sensor Drought Early Warning System — Raya Kobo Woreda, North Wollo Zone, Amhara, Ethiopia
 
 Machine Learning-Based Drought Risk Mapping and Early Warning System for Raya Kobo Woreda, North Wollo Zone, Amhara Region, Ethiopia.
 
