@@ -465,7 +465,6 @@ if drivers:
     drivers_df["feature"] = drivers_df["feature"].map(lambda f: FEATURE_LABELS.get(f, f))
     drivers_df["contribution"] = drivers_df["coefficient"] * drivers_df["value_z"]
     drivers_df = drivers_df.sort_values("contribution")
-
     fig_drivers = go.Figure(
         go.Bar(
             x=drivers_df["contribution"],
