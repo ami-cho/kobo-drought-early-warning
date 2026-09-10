@@ -412,12 +412,30 @@ st.markdown('<hr class="kobo-rule">', unsafe_allow_html=True)
 # EXPLAINABILITY
 # =================================================================
 st.markdown('<div class="kobo-label">What\'s driving this prediction</div>', unsafe_allow_html=True)
+FEATURE_LABELS = {
+    "ndvi_anomaly_z": "NDVI anomaly",
+    "vci": "VCI",
+    "rainfall_mm": "Rainfall",
+    "rain_anomaly_z": "Rainfall anomaly",
+    "spi_1": "SPI-1",
+    "spi_3": "SPI-3",
+    "spi_12": "SPI-12",
+    "lst_anomaly_z": "LST anomaly",
+    "soil_anomaly_z": "Soil moisture anomaly",
+    "soil_percentile": "Soil moisture percentile",
+    "rain_anomaly_z_lag1": "Rainfall anomaly (prev. month)",
+    "spi_1_lag1": "SPI-1 (prev. month)",
+    "spi_3_lag1": "SPI-3 (prev. month)",
+    "soil_anomaly_z_lag1": "Soil moisture anomaly (prev. month)",
+    "ndvi_anomaly_z_lag1": "NDVI anomaly (prev. month)",
+}
+
 drivers = status.get("top_drivers", [])
 if drivers:
     drivers_df = pd.DataFrame(drivers)
+    drivers_df["feature"] = drivers_df["feature"].map(lambda f: FEATURE_LABELS.get(f, f))
     drivers_df["contribution"] = drivers_df["coefficient"] * drivers_df["value_z"]
     drivers_df = drivers_df.sort_values("contribution")
-
     fig_drivers = go.Figure(
         go.Bar(
             x=drivers_df["contribution"],
