@@ -313,6 +313,17 @@ def compute_live_status():
     expected_15d = daily_clim_rate * 15
     forecast_pct = total_forecast_15d / expected_15d * 100 if expected_15d > 0 else np.nan
 
+    # Explainability: this class's coefficients x this observation's scaled values
+    # (multinomial logistic regression -- see the UI caveat about relative-not-absolute contribution)
+    class_idx = list(artifacts["model"].classes_).index(pred_class)
+    coef_for_class = artifacts["model"].coef_[class_idx]
+    drivers_df = pd.DataFrame({
+        "feature": predictor_cols,
+        "coefficient": coef_for_class,
+        "value_z": X_scaled[0],
+    }).sort_values("coefficient", key=abs, ascending=False)
+    top_drivers = drivers_df.head(6).to_dict(orient="records")
+
     if pred_class == "Severe":
         base_status = "Warning"
     elif pred_class == "Moderate":
@@ -344,5 +355,6 @@ def compute_live_status():
             "4_7_day_mm": float(forecast["forecast_4_7"]),
             "8_15_day_mm": float(forecast["forecast_8_15"]),
         },
+        "top_drivers": top_drivers,
         "computed_at": pd.Timestamp.utcnow().strftime("%Y-%m-%d %H:%M UTC"),
     }
