@@ -269,9 +269,11 @@ hero_html = f"""
 """
 st.markdown(hero_html, unsafe_allow_html=True)
 
-# Live-ticking "updated Xs ago" counter — the clearest signal to a first-time
-# visitor that this page is genuinely recomputing, not a static export.
+# Live-ticking "updated Xs ago" counter + next-refresh progress bar — the
+# clearest signal to a first-time visitor that this page is genuinely
+# recomputing, not a static export.
 if live_ok and computed_at_iso:
+    ttl_seconds = status.get("cache_ttl_seconds", 6 * 3600)
     components.html(
         f"""
         <html>
@@ -287,30 +289,47 @@ if live_ok and computed_at_iso:
                 letter-spacing: 0.08em;
                 color: {COLORS['text_muted']};
                 text-transform: uppercase;
-                padding: 4px 0 4px 20px;
+                padding: 4px 0 3px 20px;
+            }}
+            #kobo-progress-wrap {{ padding: 0 20px 4px 20px; max-width: 280px; }}
+            #kobo-progress-bar-bg {{
+                height: 3px; background: {COLORS['rule']}; border-radius: 2px; overflow: hidden;
+            }}
+            #kobo-progress-bar-fg {{
+                height: 100%; background: {live_dot_color}; width: 0%;
+            }}
+            #kobo-next-text {{
+                font-family: 'IBM Plex Mono', monospace; font-size: 0.65rem;
+                color: {COLORS['text_muted']}; padding: 3px 0 0 20px;
             }}
         </style>
         </head>
         <body>
         <div id="kobo-ago-wrap">Updated <span id="kobo-ago" style="color:{live_dot_color}; font-weight:600;">just now</span></div>
+        <div id="kobo-progress-wrap"><div id="kobo-progress-bar-bg"><div id="kobo-progress-bar-fg"></div></div></div>
+        <div id="kobo-next-text">Next refresh in <span id="kobo-next">—</span></div>
         <script>
         const computedAt = new Date("{computed_at_iso}");
+        const ttlSeconds = {ttl_seconds};
+
+        function fmtDuration(secs) {{
+            if (secs < 60) return secs + "s";
+            if (secs < 3600) return Math.floor(secs / 60) + "m " + (secs % 60) + "s";
+            const h = Math.floor(secs / 3600);
+            const m = Math.floor((secs % 3600) / 60);
+            return h + "h " + m + "m";
+        }}
+
         function tick() {{
             const now = new Date();
-            let secs = Math.floor((now - computedAt) / 1000);
-            if (secs < 0) secs = 0;
-            let text;
-            if (secs < 60) {{
-                text = secs + "s ago";
-            }} else if (secs < 3600) {{
-                text = Math.floor(secs / 60) + "m " + (secs % 60) + "s ago";
-            }} else {{
-                const h = Math.floor(secs / 3600);
-                const m = Math.floor((secs % 3600) / 60);
-                text = h + "h " + m + "m ago";
-            }}
-            const el = document.getElementById("kobo-ago");
-            if (el) el.textContent = text;
+            let elapsed = Math.floor((now - computedAt) / 1000);
+            if (elapsed < 0) elapsed = 0;
+            document.getElementById("kobo-ago").textContent = fmtDuration(elapsed) + " ago";
+
+            const remaining = Math.max(0, ttlSeconds - elapsed);
+            const pct = Math.min(100, (elapsed / ttlSeconds) * 100);
+            document.getElementById("kobo-progress-bar-fg").style.width = pct + "%";
+            document.getElementById("kobo-next").textContent = remaining <= 0 ? "due now" : fmtDuration(remaining);
         }}
         tick();
         setInterval(tick, 1000);
@@ -318,7 +337,7 @@ if live_ok and computed_at_iso:
         </body>
         </html>
         """,
-        height=26,
+        height=58,
     )
 
 if not live_ok:
@@ -331,31 +350,105 @@ if not live_ok:
 vec = status["current_vector"]
 
 
-def fmt(v, suffix="", sign=False):
-    if v is None:
-        return "—"
-    if sign:
-        return f"{v:+.2f}{suffix}"
-    return f"{v:.2f}{suffix}"
+def safe_delta(cur, lag):
+    if cur is None or lag is None:
+        return None
+    return cur - lag
 
 
-strip_items = [
-    ("NDVI anomaly", fmt(vec.get("ndvi_anomaly_z"), "σ", sign=True), COLORS["sage"]),
-    ("VCI", fmt(vec.get("vci")), COLORS["sage"]),
-    ("Rainfall anomaly", fmt(vec.get("rain_anomaly_z"), "σ", sign=True), COLORS["sky"]),
-    ("LST anomaly", fmt(vec.get("lst_anomaly_z"), "σ", sign=True), COLORS["clay"]),
-    ("Soil moisture anomaly", fmt(vec.get("soil_anomaly_z"), "σ", sign=True), COLORS["ochre"]),
-    ("15-day forecast", f"{status['forecast_pct_of_normal']:.0f}% normal", COLORS["sky"]),
+metrics = [
+    {"label": "NDVI anomaly", "value": vec.get("ndvi_anomaly_z"), "suffix": "σ", "decimals": 2, "sign": True,
+     "color": COLORS["sage"], "delta": safe_delta(vec.get("ndvi_anomaly_z"), vec.get("ndvi_anomaly_z_lag1"))},
+    {"label": "VCI", "value": vec.get("vci"), "suffix": "", "decimals": 2, "sign": False,
+     "color": COLORS["sage"], "delta": safe_delta(vec.get("vci"), vec.get("vci_lag1"))},
+    {"label": "Rainfall anomaly", "value": vec.get("rain_anomaly_z"), "suffix": "σ", "decimals": 2, "sign": True,
+     "color": COLORS["sky"], "delta": safe_delta(vec.get("rain_anomaly_z"), vec.get("rain_anomaly_z_lag1"))},
+    {"label": "LST anomaly", "value": vec.get("lst_anomaly_z"), "suffix": "σ", "decimals": 2, "sign": True,
+     "color": COLORS["clay"], "delta": safe_delta(vec.get("lst_anomaly_z"), vec.get("lst_anomaly_z_lag1"))},
+    {"label": "Soil moisture anomaly", "value": vec.get("soil_anomaly_z"), "suffix": "σ", "decimals": 2, "sign": True,
+     "color": COLORS["ochre"], "delta": safe_delta(vec.get("soil_anomaly_z"), vec.get("soil_anomaly_z_lag1"))},
+    {"label": "15-day forecast", "value": status.get("forecast_pct_of_normal"), "suffix": "% normal", "decimals": 0, "sign": False,
+     "color": COLORS["sky"], "delta": None},
 ]
+metrics_json = json.dumps(metrics)
 
-strip_html = '<div class="kobo-strip">' + "".join(
-    f"""<div class="kobo-strip-item">
-        <div class="kobo-strip-label">{label}</div>
-        <div class="kobo-strip-value" style="color:{color}">{val}</div>
-    </div>"""
-    for label, val, color in strip_items
-) + "</div>"
-st.markdown(strip_html, unsafe_allow_html=True)
+components.html(
+    f"""
+    <html><head><style>
+    html, body {{ margin:0; padding:0; background:{COLORS['bg']}; font-family:'Space Grotesk',sans-serif; }}
+    #kobo-strip-container {{
+        display:flex; justify-content:space-between; flex-wrap:wrap; gap:1.5rem; padding: 6px 0;
+    }}
+    .kobo-strip-item {{ flex:1; min-width:130px; }}
+    .kobo-strip-label {{
+        font-family:'IBM Plex Mono',monospace; font-size:0.68rem; letter-spacing:0.06em;
+        color:{COLORS['text_muted']}; text-transform:uppercase; margin-bottom:0.3rem;
+    }}
+    .kobo-strip-value {{ font-family:'IBM Plex Mono',monospace; font-size:1.5rem; font-weight:500; }}
+    .kobo-strip-delta {{
+        font-family:'IBM Plex Mono',monospace; font-size:0.68rem; color:{COLORS['text_muted']}; margin-top:0.2rem;
+    }}
+    </style></head>
+    <body>
+    <div id="kobo-strip-container"></div>
+    <script>
+    const metrics = {metrics_json};
+    const container = document.getElementById("kobo-strip-container");
+
+    metrics.forEach((m, i) => {{
+        const item = document.createElement("div");
+        item.className = "kobo-strip-item";
+
+        const labelDiv = document.createElement("div");
+        labelDiv.className = "kobo-strip-label";
+        labelDiv.textContent = m.label;
+        item.appendChild(labelDiv);
+
+        const valueDiv = document.createElement("div");
+        valueDiv.className = "kobo-strip-value";
+        valueDiv.style.color = m.color;
+        valueDiv.id = "kobo-val-" + i;
+        valueDiv.textContent = "—";
+        item.appendChild(valueDiv);
+
+        if (m.delta !== null && m.delta !== undefined) {{
+            const deltaDiv = document.createElement("div");
+            deltaDiv.className = "kobo-strip-delta";
+            const arrow = m.delta > 0.01 ? "\u25B2" : (m.delta < -0.01 ? "\u25BC" : "\u25AC");
+            deltaDiv.textContent = arrow + " " + Math.abs(m.delta).toFixed(m.decimals) + " vs last month";
+            item.appendChild(deltaDiv);
+        }}
+
+        container.appendChild(item);
+    }});
+
+    function animateValue(id, target, decimals, suffix, showSign, duration) {{
+        const el = document.getElementById(id);
+        if (target === null || target === undefined) {{
+            el.textContent = "—";
+            return;
+        }}
+        const startTime = performance.now();
+        function step(now) {{
+            const progress = Math.min(1, (now - startTime) / duration);
+            const eased = 1 - Math.pow(1 - progress, 3);
+            const current = target * eased;
+            let text = current.toFixed(decimals);
+            if (showSign && current >= 0) text = "+" + text;
+            el.textContent = text + suffix;
+            if (progress < 1) requestAnimationFrame(step);
+        }}
+        requestAnimationFrame(step);
+    }}
+
+    metrics.forEach((m, i) => {{
+        animateValue("kobo-val-" + i, m.value, m.decimals, m.suffix, m.sign, 700 + i * 80);
+    }});
+    </script>
+    </body></html>
+    """,
+    height=125,
+)
 st.markdown('<hr class="kobo-rule">', unsafe_allow_html=True)
 
 st.markdown(
@@ -365,11 +458,29 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+def freshness_indicator(date_str, green_days, amber_days):
+    if not date_str or date_str == "unknown":
+        return f'<span style="color:{COLORS["text_muted"]}">●</span> unknown'
+    try:
+        d = pd.to_datetime(date_str)
+        now = pd.Timestamp.utcnow().tz_localize(None)
+        age_days = (now - d).days
+    except Exception:
+        return f'<span style="color:{COLORS["text_muted"]}">●</span> {date_str}'
+    if age_days <= green_days:
+        color = COLORS["sage"]
+    elif age_days <= amber_days:
+        color = COLORS["ochre"]
+    else:
+        color = COLORS["clay"]
+    return f'<span style="color:{color}">●</span> {date_str} <span style="color:{COLORS["text_muted"]}">({age_days}d ago)</span>'
+
+
 with st.expander("Data currency — sources update at different real-world speeds"):
     c1, c2, c3 = st.columns(3)
-    c1.markdown(f"<span class='mono'>NDVI</span><br/>{status.get('ndvi_date', 'unknown')}", unsafe_allow_html=True)
-    c2.markdown(f"<span class='mono'>LST</span><br/>{status.get('lst_date', 'unknown')}", unsafe_allow_html=True)
-    c3.markdown(f"<span class='mono'>Rainfall / soil moisture</span><br/>{status.get('rain_soil_date', 'unknown')}", unsafe_allow_html=True)
+    c1.markdown(f"<span class='mono'>NDVI</span><br/>{freshness_indicator(status.get('ndvi_date'), 20, 40)}", unsafe_allow_html=True)
+    c2.markdown(f"<span class='mono'>LST</span><br/>{freshness_indicator(status.get('lst_date'), 15, 30)}", unsafe_allow_html=True)
+    c3.markdown(f"<span class='mono'>Rainfall / soil moisture</span><br/>{freshness_indicator(status.get('rain_soil_date'), 45, 75)}", unsafe_allow_html=True)
 
 st.markdown('<hr class="kobo-rule">', unsafe_allow_html=True)
 

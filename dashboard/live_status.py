@@ -119,21 +119,30 @@ def pull_current_state(kobo_geom, months_back=15):
     ndvi_val_lag1 = ndvi_recent_df.iloc[-2]["ndvi"] if len(ndvi_recent_df) >= 2 else np.nan
     ndvi_date_lag1 = ndvi_recent_df.iloc[-2]["date"] if len(ndvi_recent_df) >= 2 else None
 
-    # LST — most recent available composite
-    lst_img = (
+    # LST — last 3 composites (need current + a real lag1 for trend arrows)
+    lst_coll_recent = (
         ee.ImageCollection("MODIS/061/MOD11A2")
         .filterBounds(kobo_geom)
         .sort("system:time_start", False)
-        .first()
+        .limit(3)
     )
-    lst_qc = lst_img.select("QC_Day")
-    lst_val = (
-        lst_img.select("LST_Day_1km").updateMask(lst_qc.bitwiseAnd(3).eq(0))
-        .multiply(0.02).subtract(273.15)
-        .reduceRegion(ee.Reducer.mean(), kobo_geom, 1000, maxPixels=1e9)
-        .get("LST_Day_1km").getInfo()
-    )
-    lst_date = pd.to_datetime(lst_img.date().format("YYYY-MM-dd").getInfo())
+
+    def lst_stat(img):
+        qc = img.select("QC_Day")
+        val = img.select("LST_Day_1km").updateMask(qc.bitwiseAnd(3).eq(0)).multiply(0.02).subtract(273.15).reduceRegion(
+            ee.Reducer.mean(), kobo_geom, 1000, maxPixels=1e9
+        ).get("LST_Day_1km")
+        return ee.Feature(None, {"date": img.date().format("YYYY-MM-dd"), "lst_c": val})
+
+    lst_recent_fc = lst_coll_recent.map(lst_stat)
+    lst_recent_df = pd.DataFrame([f["properties"] for f in lst_recent_fc.getInfo()["features"]])
+    lst_recent_df["date"] = pd.to_datetime(lst_recent_df["date"])
+    lst_recent_df = lst_recent_df.sort_values("date").reset_index(drop=True)
+
+    lst_val = lst_recent_df.iloc[-1]["lst_c"]
+    lst_date = lst_recent_df.iloc[-1]["date"]
+    lst_val_lag1 = lst_recent_df.iloc[-2]["lst_c"] if len(lst_recent_df) >= 2 else np.nan
+    lst_date_lag1 = lst_recent_df.iloc[-2]["date"] if len(lst_recent_df) >= 2 else None
 
     # CHIRPS — recent monthly totals (need history for SPI-1/3/12)
     chirps_live = (
@@ -189,6 +198,7 @@ def pull_current_state(kobo_geom, months_back=15):
         "ndvi_val": ndvi_val, "ndvi_date": ndvi_date,
         "ndvi_val_lag1": ndvi_val_lag1, "ndvi_date_lag1": ndvi_date_lag1,
         "lst_val": lst_val, "lst_date": lst_date,
+        "lst_val_lag1": lst_val_lag1, "lst_date_lag1": lst_date_lag1,
         "rain_df": rain_df, "soil_df": soil_df,
     }
 
@@ -289,6 +299,17 @@ def compute_live_status():
             if state["ndvi_val_lag1"] is not None and pd.notna(state["ndvi_val_lag1"])
             else np.nan
         ),
+        "lst_anomaly_z_lag1": (
+            get_anomaly(state["lst_val_lag1"], state["lst_date_lag1"].month, clim["lst_clim"])
+            if state["lst_val_lag1"] is not None and pd.notna(state["lst_val_lag1"])
+            else np.nan
+        ),
+        "vci_lag1": (
+            (state["ndvi_val_lag1"] - clim["ndvi_clim"].loc[state["ndvi_date_lag1"].month, "clim_min"]) /
+            (clim["ndvi_clim"].loc[state["ndvi_date_lag1"].month, "clim_max"] - clim["ndvi_clim"].loc[state["ndvi_date_lag1"].month, "clim_min"]) * 100
+            if state["ndvi_val_lag1"] is not None and pd.notna(state["ndvi_val_lag1"])
+            else np.nan
+        ),
     }
 
     predictor_cols = artifacts["predictor_cols"]
@@ -358,4 +379,5 @@ def compute_live_status():
         "top_drivers": top_drivers,
         "computed_at": pd.Timestamp.utcnow().strftime("%Y-%m-%d %H:%M UTC"),
         "computed_at_iso": pd.Timestamp.utcnow().isoformat() + "Z",
+        "cache_ttl_seconds": 6 * 3600,
     }
