@@ -378,6 +378,6 @@ def compute_live_status():
         },
         "top_drivers": top_drivers,
         "computed_at": pd.Timestamp.utcnow().strftime("%Y-%m-%d %H:%M UTC"),
-        "computed_at_iso": pd.Timestamp.utcnow().isoformat() + "Z",
+        "computed_at_iso": pd.Timestamp.utcnow().isoformat(),
         "cache_ttl_seconds": 6 * 3600,
     }
