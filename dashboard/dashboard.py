@@ -15,6 +15,7 @@ import geopandas as gpd
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
+import streamlit.components.v1 as components
 
 from live_status import compute_live_status
 
@@ -120,14 +121,31 @@ st.markdown(
 
     .kobo-live-dot {{
         display: inline-block;
-        width: 8px; height: 8px;
-        border-radius: 50%;
-        margin-right: 8px;
-        animation: kobo-pulse 2.4s ease-in-out infinite;
+        position: relative;
+        width: 10px; height: 10px;
+        margin-right: 10px;
+        vertical-align: middle;
     }}
-    @keyframes kobo-pulse {{
-        0%, 100% {{ opacity: 1; }}
-        50% {{ opacity: 0.35; }}
+    .kobo-live-dot::before {{
+        content: '';
+        position: absolute;
+        top: 0; left: 0;
+        width: 10px; height: 10px;
+        border-radius: 50%;
+        background: currentColor;
+    }}
+    .kobo-live-dot::after {{
+        content: '';
+        position: absolute;
+        top: 0; left: 0;
+        width: 10px; height: 10px;
+        border-radius: 50%;
+        background: currentColor;
+        animation: kobo-radar-ping 1.8s cubic-bezier(0,0,0.2,1) infinite;
+    }}
+    @keyframes kobo-radar-ping {{
+        0% {{ transform: scale(1); opacity: 0.7; }}
+        100% {{ transform: scale(3.4); opacity: 0; }}
     }}
 
     /* Indicator strip */
@@ -221,18 +239,15 @@ status_color = STATUS_COLOR.get(status["status"], COLORS["text_muted"])
 # HERO MASTHEAD
 # =================================================================
 live_dot_color = COLORS["sage"] if live_ok else COLORS["ochre"]
-live_text = (
-    f"LIVE &nbsp;·&nbsp; recomputed {status.get('computed_at', '')}"
-    if live_ok
-    else f"SNAPSHOT &nbsp;·&nbsp; live pull unavailable"
-)
+computed_at_iso = status.get("computed_at_iso")
 
 hero_html = f"""
 <div class="kobo-hero" style="--status-glow: {status_color}">
   <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:1.5rem;">
     <div>
-      <div class="kobo-label" style="margin-bottom:0.9rem;">
-        <span class="kobo-live-dot" style="background:{live_dot_color}"></span>{live_text}
+      <div class="kobo-label" style="margin-bottom:0.9rem; display:flex; align-items:center;">
+        <span class="kobo-live-dot" style="color:{live_dot_color}"></span>
+        <span id="kobo-live-text">{"LIVE" if live_ok else "SNAPSHOT — live pull unavailable"}</span>
       </div>
       <h1 style="margin:0; font-size:1.95rem; line-height:1.2;">Multi-Sensor Drought<br/>Early Warning System</h1>
       <p class="mono" style="color:{COLORS['text_muted']}; font-size:0.85rem; margin-top:0.8rem;">
@@ -253,6 +268,58 @@ hero_html = f"""
 </div>
 """
 st.markdown(hero_html, unsafe_allow_html=True)
+
+# Live-ticking "updated Xs ago" counter — the clearest signal to a first-time
+# visitor that this page is genuinely recomputing, not a static export.
+if live_ok and computed_at_iso:
+    components.html(
+        f"""
+        <html>
+        <head>
+        <style>
+            html, body {{
+                margin: 0; padding: 0;
+                background: {COLORS['bg']};
+            }}
+            #kobo-ago-wrap {{
+                font-family: 'IBM Plex Mono', monospace;
+                font-size: 0.72rem;
+                letter-spacing: 0.08em;
+                color: {COLORS['text_muted']};
+                text-transform: uppercase;
+                padding: 4px 0 4px 20px;
+            }}
+        </style>
+        </head>
+        <body>
+        <div id="kobo-ago-wrap">Updated <span id="kobo-ago" style="color:{live_dot_color}; font-weight:600;">just now</span></div>
+        <script>
+        const computedAt = new Date("{computed_at_iso}");
+        function tick() {{
+            const now = new Date();
+            let secs = Math.floor((now - computedAt) / 1000);
+            if (secs < 0) secs = 0;
+            let text;
+            if (secs < 60) {{
+                text = secs + "s ago";
+            }} else if (secs < 3600) {{
+                text = Math.floor(secs / 60) + "m " + (secs % 60) + "s ago";
+            }} else {{
+                const h = Math.floor(secs / 3600);
+                const m = Math.floor((secs % 3600) / 60);
+                text = h + "h " + m + "m ago";
+            }}
+            const el = document.getElementById("kobo-ago");
+            if (el) el.textContent = text;
+        }}
+        tick();
+        setInterval(tick, 1000);
+        </script>
+        </body>
+        </html>
+        """,
+        height=26,
+    )
 
 if not live_ok:
     with st.expander("Why is this a snapshot instead of live data?"):
@@ -465,6 +532,7 @@ if drivers:
     drivers_df["feature"] = drivers_df["feature"].map(lambda f: FEATURE_LABELS.get(f, f))
     drivers_df["contribution"] = drivers_df["coefficient"] * drivers_df["value_z"]
     drivers_df = drivers_df.sort_values("contribution")
+
     fig_drivers = go.Figure(
         go.Bar(
             x=drivers_df["contribution"],
