@@ -1,0 +1,94 @@
+{
+  "region_id": "kobo",
+  "status": "Watch",
+  "current_class": "Moderate",
+  "current_confidence": 0.8222974398910857,
+  "class_probabilities": {
+    "Moderate": 0.8222974398910857,
+    "Normal": 0.035539335845252304,
+    "Severe": 0.14216322426366207
+  },
+  "forecast_pct_below_normal": 87.87878787878788,
+  "forecast_note": "88% of ensemble members show below-normal rainfall \u2014 high confidence of continued/worsening deficit",
+  "ndvi_date": "2026-08-13",
+  "lst_date": "2026-08-29",
+  "rain_soil_date": "2026-07-12",
+  "forecast_issued": "2026-09-12 12:00",
+  "current_vector": {
+    "ndvi_anomaly_z": -2.388614768177999,
+    "vci": 19.06358095935041,
+    "rainfall_mm": 94.26852147731678,
+    "rain_anomaly_z": -1.187407666360498,
+    "spi_1": -1.1635573923915215,
+    "spi_3": -2.385084191204279,
+    "spi_12": -1.3308548713149615,
+    "lst_anomaly_z": -1.1627969408490066,
+    "soil_anomaly_z": -0.5278917460394509,
+    "soil_percentile": 40.0,
+    "rain_anomaly_z_lag1": -0.977440559730665,
+    "spi_1_lag1": -1.5156975735394154,
+    "spi_3_lag1": -0.9569914204146757,
+    "soil_anomaly_z_lag1": -0.04812576848803683,
+    "ndvi_anomaly_z_lag1": -1.023547726836565,
+    "lst_anomaly_z_lag1": -1.6501389424733137,
+    "vci_lag1": 14.1913734443921
+  },
+  "forecast_windows": {
+    "1_3": {
+      "median_mm": 2.666015625,
+      "p10_mm": 1.54296875,
+      "p90_mm": 4.474609375,
+      "pct_below_normal": 100.0,
+      "n_members": 11
+    },
+    "4_7": {
+      "median_mm": 3.734375,
+      "p10_mm": 1.6484375,
+      "p90_mm": 12.349609375,
+      "pct_below_normal": 81.81818181818183,
+      "n_members": 11
+    },
+    "8_15": {
+      "median_mm": 7.287109375,
+      "p10_mm": 1.81640625,
+      "p90_mm": 15.140625,
+      "pct_below_normal": 81.81818181818183,
+      "n_members": 11
+    }
+  },
+  "top_drivers": [
+    {
+      "feature": "rain_anomaly_z",
+      "coefficient": -1.273476673654897,
+      "value_z": -1.348326375383779
+    },
+    {
+      "feature": "ndvi_anomaly_z",
+      "coefficient": 1.1028071154693389,
+      "value_z": -2.7114066884027666
+    },
+    {
+      "feature": "rain_anomaly_z_lag1",
+      "coefficient": -0.5197725945884922,
+      "value_z": -1.0981209057273364
+    },
+    {
+      "feature": "lst_anomaly_z",
+      "coefficient": -0.5134790482448265,
+      "value_z": -1.8975416183011888
+    },
+    {
+      "feature": "soil_anomaly_z",
+      "coefficient": 0.5076870285635139,
+      "value_z": -0.5012420624793336
+    },
+    {
+      "feature": "spi_3",
+      "coefficient": 0.4250323086996575,
+      "value_z": -2.7714856229452303
+    }
+  ],
+  "computed_at": "2026-09-12 21:47 UTC",
+  "computed_at_iso": "2026-09-12T21:47:11Z",
+  "refresh_interval_seconds": 21600
+}
