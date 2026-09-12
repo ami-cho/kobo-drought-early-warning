@@ -2,10 +2,4 @@ streamlit
 geopandas
 pandas
 numpy
-scipy
 plotly>=5.24,<8
-scikit-learn
-earthengine-api
-ecmwf-opendata
-cfgrib
-xarray

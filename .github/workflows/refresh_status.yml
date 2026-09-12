@@ -1,0 +1,37 @@
+name: Refresh live drought status
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'  # every 6 hours
+  workflow_dispatch: {}     # allows a manual "Run workflow" trigger from the Actions tab
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install system dependency for cfgrib
+        run: sudo apt-get update && sudo apt-get install -y libeccodes0
+
+      - name: Install Python dependencies
+        run: pip install -r dashboard/requirements-job.txt
+
+      - name: Run refresh job
+        env:
+          GEE_SERVICE_ACCOUNT_JSON: ${{ secrets.GEE_SERVICE_ACCOUNT_JSON }}
+        run: python dashboard/refresh_job.py
+
+      - name: Commit and push if the status changed
+        run: |
+          git config user.name "kobo-refresh-bot"
+          git config user.email "actions@github.com"
+          git add dashboard/data/kobo_live_status_cache.json
+          git diff --staged --quiet || git commit -m "Automated status refresh"
+          git push

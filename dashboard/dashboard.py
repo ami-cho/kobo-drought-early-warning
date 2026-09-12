@@ -9,7 +9,10 @@ Expects a `data/` folder alongside this file (see README / DATA_SOURCES.md).
 """
 
 import json
+import re
+from datetime import datetime, timezone
 from pathlib import Path
+from urllib.parse import urlparse
 
 import geopandas as gpd
 import pandas as pd
@@ -17,7 +20,7 @@ import plotly.graph_objects as go
 import streamlit as st
 import streamlit.components.v1 as components
 
-from live_status import compute_live_status
+from status_reader import get_cached_status
 
 DATA_DIR = Path(__file__).parent / "data"
 
@@ -201,37 +204,39 @@ st.markdown(
 # =================================================================
 # LOAD DATA
 # =================================================================
+# Single call site for which region this deployment shows. The loader
+# functions and get_cached_status() below are fully parameterized by
+# region_id -- this constant is the only place "kobo" is hardcoded for
+# the UI layer. A second region wouldn't need a second UI (per scope),
+# just a second value here (or a selector, if that's ever wanted later).
+REGION_ID = "kobo"
+
+
 @st.cache_data
-def load_history():
-    df = pd.read_csv(DATA_DIR / "kobo_dashboard_history.csv")
+def load_history(region_id):
+    df = pd.read_csv(DATA_DIR / f"{region_id}_dashboard_history.csv")
     df["date"] = pd.to_datetime(df["date"])
     return df
 
 
 @st.cache_data
-def load_grid():
-    return gpd.read_file(DATA_DIR / "kobo_grid_performance.geojson")
+def load_grid(region_id):
+    return gpd.read_file(DATA_DIR / f"{region_id}_grid_performance.geojson")
 
 
 try:
-    history = load_history()
-    grid = load_grid()
+    history = load_history(REGION_ID)
+    grid = load_grid(REGION_ID)
 except FileNotFoundError as e:
     st.error(f"Reference data not found. Make sure `data/` sits alongside this file.\n\nDetails: {e}")
     st.stop()
 
-try:
-    status = compute_live_status()
-    live_ok = True
-except Exception as e:
-    live_ok = False
-    live_error = str(e)
-    try:
-        with open(DATA_DIR / "kobo_latest_status.json") as f:
-            status = json.load(f)
-    except FileNotFoundError:
-        st.error(f"Live computation failed and no fallback snapshot exists.\n\nDetails: {live_error}")
-        st.stop()
+status, is_live, is_stale, read_error = get_cached_status(REGION_ID)
+if status is None:
+    st.error(f"No drought status data available.\n\nDetails: {read_error}")
+    st.stop()
+
+live_ok = is_live and not is_stale
 
 status_color = STATUS_COLOR.get(status["status"], COLORS["text_muted"])
 
@@ -247,7 +252,7 @@ hero_html = f"""
     <div>
       <div class="kobo-label" style="margin-bottom:0.9rem; display:flex; align-items:center;">
         <span class="kobo-live-dot" style="color:{live_dot_color}"></span>
-        <span id="kobo-live-text">{"LIVE" if live_ok else "SNAPSHOT — live pull unavailable"}</span>
+        <span id="kobo-live-text">{"LIVE" if live_ok else ("STALE — refresh job may be delayed" if is_live else "SNAPSHOT — refresh job hasn't run yet")}</span>
       </div>
       <h1 style="margin:0; font-size:1.95rem; line-height:1.2;">Multi-Sensor Drought<br/>Early Warning System</h1>
       <p class="mono" style="color:{COLORS['text_muted']}; font-size:0.85rem; margin-top:0.8rem;">
@@ -272,8 +277,8 @@ st.markdown(hero_html, unsafe_allow_html=True)
 # Live-ticking "updated Xs ago" counter + next-refresh progress bar — the
 # clearest signal to a first-time visitor that this page is genuinely
 # recomputing, not a static export.
-if live_ok and computed_at_iso:
-    ttl_seconds = status.get("cache_ttl_seconds", 6 * 3600)
+if computed_at_iso:
+    refresh_interval_seconds = status.get("refresh_interval_seconds", 6 * 3600)
     components.html(
         f"""
         <html>
@@ -307,10 +312,10 @@ if live_ok and computed_at_iso:
         <body>
         <div id="kobo-ago-wrap">Updated <span id="kobo-ago" style="color:{live_dot_color}; font-weight:600;">just now</span></div>
         <div id="kobo-progress-wrap"><div id="kobo-progress-bar-bg"><div id="kobo-progress-bar-fg"></div></div></div>
-        <div id="kobo-next-text">Next refresh in <span id="kobo-next">—</span></div>
+        <div id="kobo-next-text">~Next scheduled refresh in <span id="kobo-next">—</span> <span style="opacity:0.6;">(external job, approximate)</span></div>
         <script>
         const computedAt = new Date("{computed_at_iso}");
-        const ttlSeconds = {ttl_seconds};
+        const refreshIntervalSeconds = {refresh_interval_seconds};
 
         function fmtDuration(secs) {{
             if (secs < 60) return secs + "s";
@@ -326,8 +331,8 @@ if live_ok and computed_at_iso:
             if (elapsed < 0) elapsed = 0;
             document.getElementById("kobo-ago").textContent = fmtDuration(elapsed) + " ago";
 
-            const remaining = Math.max(0, ttlSeconds - elapsed);
-            const pct = Math.min(100, (elapsed / ttlSeconds) * 100);
+            const remaining = Math.max(0, refreshIntervalSeconds - elapsed);
+            const pct = Math.min(100, (elapsed / refreshIntervalSeconds) * 100);
             document.getElementById("kobo-progress-bar-fg").style.width = pct + "%";
             document.getElementById("kobo-next").textContent = remaining <= 0 ? "due now" : fmtDuration(remaining);
         }}
@@ -341,8 +346,20 @@ if live_ok and computed_at_iso:
     )
 
 if not live_ok:
-    with st.expander("Why is this a snapshot instead of live data?"):
-        st.write(live_error)
+    with st.expander("Why isn't this live right now?"):
+        if is_live and is_stale:
+            st.write(
+                "A live status does exist, but it's older than expected — the scheduled refresh job "
+                "(which runs independently of this app, roughly every 6 hours) may have failed or been "
+                "delayed on its last run. The numbers shown are the last successful computation, not "
+                "invented or interpolated."
+            )
+        else:
+            st.write(
+                "This app reads its status from a file written by a separate scheduled job (Earth Engine "
+                "+ ECMWF AIFS run on a cron schedule, decoupled from this app's request path) — that job "
+                "hasn't produced a result yet, so this is a bundled fallback snapshot instead."
+            )
 
 # =================================================================
 # INDICATOR STRIP
@@ -367,7 +384,7 @@ metrics = [
      "color": COLORS["clay"], "delta": safe_delta(vec.get("lst_anomaly_z"), vec.get("lst_anomaly_z_lag1"))},
     {"label": "Soil moisture anomaly", "value": vec.get("soil_anomaly_z"), "suffix": "σ", "decimals": 2, "sign": True,
      "color": COLORS["ochre"], "delta": safe_delta(vec.get("soil_anomaly_z"), vec.get("soil_anomaly_z_lag1"))},
-    {"label": "15-day forecast", "value": status.get("forecast_pct_of_normal"), "suffix": "% normal", "decimals": 0, "sign": False,
+    {"label": "15-day forecast", "value": status.get("forecast_pct_below_normal"), "suffix": "% below normal", "decimals": 0, "sign": False,
      "color": COLORS["sky"], "delta": None},
 ]
 metrics_json = json.dumps(metrics)
@@ -493,7 +510,7 @@ with col_map:
     st.markdown('<div class="kobo-label">Spatial risk pattern</div>', unsafe_allow_html=True)
     geojson = json.loads(grid.to_json())
 
-    with open(DATA_DIR / "kobo_boundary.geojson") as f:
+    with open(DATA_DIR / f"{REGION_ID}_boundary.geojson") as f:
         boundary_geojson = json.load(f)
 
     fig_map = go.Figure(
@@ -559,28 +576,42 @@ with col_map:
     )
 
 with col_forecast:
-    st.markdown('<div class="kobo-label">15-day forecast · ECMWF AIFS</div>', unsafe_allow_html=True)
+    st.markdown('<div class="kobo-label">15-day forecast · ECMWF AIFS ENSEMBLE</div>', unsafe_allow_html=True)
     fw = status.get("forecast_windows", {})
     if fw:
-        windows = [
-            ("1–3 DAYS", fw.get("1_3_day_mm", 0)),
-            ("4–7 DAYS", fw.get("4_7_day_mm", 0)),
-            ("8–15 DAYS", fw.get("8_15_day_mm", 0)),
-        ]
-        max_mm = max(v for _, v in windows) or 1
-        for label, mm in windows:
-            pct = mm / max_mm * 100
+        window_labels = [("1–3 DAYS", "1_3"), ("4–7 DAYS", "4_7"), ("8–15 DAYS", "8_15")]
+        # Shared scale across all three windows so the bars are comparable
+        max_p90 = max(fw.get(key, {}).get("p90_mm", 0) for _, key in window_labels) or 1
+
+        for label, key in window_labels:
+            w = fw.get(key, {})
+            median = w.get("median_mm", 0)
+            p10 = w.get("p10_mm", 0)
+            p90 = w.get("p90_mm", 0)
+            pct_below = w.get("pct_below_normal", 0)
+            n_members = w.get("n_members", 0)
+
+            range_left = p10 / max_p90 * 100
+            range_width = max(0.5, (p90 - p10) / max_p90 * 100)
+            median_pos = median / max_p90 * 100
+
+            below_color = COLORS["clay"] if pct_below > 65 else (COLORS["ochre"] if pct_below > 35 else COLORS["sage"])
+
             st.markdown(
                 f"""
-                <div style="margin-bottom:1.1rem;">
-                    <div class="kobo-strip-label">{label}</div>
-                    <div style="display:flex; align-items:center; gap:0.7rem;">
-                        <div style="flex:1; height:6px; background:{COLORS['rule']}; border-radius:3px; overflow:hidden;">
-                            <div style="width:{pct}%; height:100%; background:{COLORS['sky']};"></div>
-                        </div>
-                        <div class="mono" style="color:{COLORS['sky']}; font-size:0.95rem; min-width:60px; text-align:right;">
-                            {mm:.1f} mm
-                        </div>
+                <div style="margin-bottom:1.3rem;">
+                    <div style="display:flex; justify-content:space-between; align-items:baseline;">
+                        <div class="kobo-strip-label">{label}</div>
+                        <div class="mono" style="color:{below_color}; font-size:0.78rem;">{pct_below:.0f}% below normal</div>
+                    </div>
+                    <div style="position:relative; height:10px; background:{COLORS['rule']}; border-radius:3px; margin-top:4px;">
+                        <div style="position:absolute; left:{range_left}%; width:{range_width}%; height:100%;
+                                    background:{COLORS['sky']}55; border-radius:3px;"></div>
+                        <div style="position:absolute; left:{median_pos}%; width:2px; height:14px; top:-2px;
+                                    background:{COLORS['sky']};"></div>
+                    </div>
+                    <div class="mono" style="color:{COLORS['text_muted']}; font-size:0.72rem; margin-top:3px;">
+                        median {median:.1f} mm &nbsp;·&nbsp; range {p10:.1f}–{p90:.1f} mm ({n_members} members)
                     </div>
                 </div>
                 """,
@@ -588,7 +619,8 @@ with col_forecast:
             )
         st.markdown(
             f"""<p style="color:{COLORS['text_muted']}; font-size:0.78rem; margin-top:0.5rem;">
-            Deterministic single-run forecast — one plausible scenario, not an ensemble probability.
+            Ensemble spread across {fw.get('1_3', {}).get('n_members', 11)} AIFS-ENS members (control + a subset
+            of perturbed members) — the shaded band is the 10th–90th percentile range, the line marks the median.
             </p>""",
             unsafe_allow_html=True,
         )
@@ -673,6 +705,149 @@ if drivers:
 st.markdown('<hr class="kobo-rule">', unsafe_allow_html=True)
 
 # =================================================================
+# MODEL VALIDATION
+# =================================================================
+st.markdown('<div class="kobo-label">Model validation — held-out evaluation</div>', unsafe_allow_html=True)
+
+try:
+    with open(DATA_DIR / f"{REGION_ID}_model_validation.json") as f:
+        validation = json.load(f)
+    validation_ok = True
+except FileNotFoundError:
+    validation_ok = False
+
+if validation_ok:
+    class_order = validation["class_order"]
+    models = validation["models"]
+
+    st.markdown(
+        f"""<p style="color:{COLORS['text_muted']}; font-size:0.82rem;">
+        Evaluated on {validation['test_period']} ({validation['n_test_months']} months) — a period never
+        used for model selection or tuning (that was the separate validation period's job).
+        </p>""",
+        unsafe_allow_html=True,
+    )
+
+    model_labels = {
+        "logistic_regression": "Logistic regression (deployed)",
+        "climatology_baseline": "Climatology baseline",
+        "persistence_baseline": "Persistence baseline",
+    }
+
+    # Elevated-risk recall (Moderate + Severe) is the metric that actually matters for a
+    # warning system — overall accuracy alone rewards a model that just predicts "Normal"
+    # for a rare-event problem like this one. Lead with this, not raw accuracy.
+    st.markdown(
+        f"""<p style="color:{COLORS['text_muted']}; font-size:0.78rem;">
+        Elevated-risk recall (Moderate + Severe) — the metric that matters for a warning system
+        </p>""",
+        unsafe_allow_html=True,
+    )
+    recall_cols = st.columns(len(model_labels))
+    for col, (key, label) in zip(recall_cols, model_labels.items()):
+        pc = models[key]["per_class"]
+        elevated_recall = (pc["Moderate"]["recall"] + pc["Severe"]["recall"]) / 2
+        is_deployed = key == "logistic_regression"
+        color = COLORS["sage"] if is_deployed else COLORS["clay"]
+        col.markdown(
+            f"""<div class="kobo-strip-label">{label}</div>
+            <div class="mono" style="font-size:1.7rem; font-weight:{'600' if is_deployed else '400'}; color:{color};">
+                {elevated_recall*100:.0f}%
+            </div>
+            <div style="font-size:0.7rem; color:{COLORS['text_muted']};">
+                Mod: {pc['Moderate']['recall']*100:.0f}% &nbsp;·&nbsp; Sev: {pc['Severe']['recall']*100:.0f}%
+            </div>""",
+            unsafe_allow_html=True,
+        )
+
+    st.markdown("<br/>", unsafe_allow_html=True)
+    st.markdown(
+        f"""<p style="color:{COLORS['text_muted']}; font-size:0.78rem;">
+        Overall accuracy — shown for completeness, but read with caution: on an imbalanced test
+        set like this one (42 Normal / 3 Moderate / 3 Severe months), a model that simply predicts
+        "Normal" nearly every time scores well here while catching zero real drought events.
+        The recall numbers above are the honest comparison.
+        </p>""",
+        unsafe_allow_html=True,
+    )
+    acc_cols = st.columns(len(model_labels))
+    for col, (key, label) in zip(acc_cols, model_labels.items()):
+        acc = models[key]["accuracy"]
+        is_deployed = key == "logistic_regression"
+        color = COLORS["text"] if is_deployed else COLORS["text_muted"]
+        col.markdown(
+            f"""<div class="kobo-strip-label">{label}</div>
+            <div class="mono" style="font-size:1.2rem; color:{color};">
+                {acc*100:.1f}%
+            </div>""",
+            unsafe_allow_html=True,
+        )
+
+    st.markdown("<br/>", unsafe_allow_html=True)
+    st.markdown(
+        f"""<p style="color:{COLORS['text_muted']}; font-size:0.78rem; margin-top:0.4rem;">
+        Per-class performance — deployed model
+        </p>""",
+        unsafe_allow_html=True,
+    )
+    per_class = models["logistic_regression"]["per_class"]
+    class_colors = {"Normal": COLORS["sage"], "Moderate": COLORS["ochre"], "Severe": COLORS["clay"]}
+    pc_cols = st.columns(3)
+    for col, cls in zip(pc_cols, class_order):
+        stats = per_class[cls]
+        col.markdown(
+            f"""
+            <div style="border-left: 3px solid {class_colors[cls]}; padding-left: 0.8rem;">
+                <div class="kobo-strip-label">{cls} (n={int(stats['support'])})</div>
+                <div class="mono" style="font-size:1.1rem; color:{COLORS['text']};">
+                    P {stats['precision']*100:.0f}% &nbsp; R {stats['recall']*100:.0f}%
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    cm = models["logistic_regression"]["confusion_matrix"]
+    fig_cm = go.Figure(
+        go.Heatmap(
+            z=cm,
+            x=[f"Pred {c}" for c in class_order],
+            y=[f"True {c}" for c in class_order],
+            colorscale=[[0, COLORS["surface"]], [1, COLORS["sage"]]],
+            showscale=False,
+            text=cm,
+            texttemplate="%{text}",
+            textfont=dict(family="IBM Plex Mono", size=14, color=COLORS["text"]),
+        )
+    )
+    fig_cm.update_layout(
+        paper_bgcolor=COLORS["surface"],
+        plot_bgcolor=COLORS["surface"],
+        font=dict(family="Space Grotesk", color=COLORS["text_muted"], size=11),
+        height=280,
+        margin={"t": 20, "l": 10, "r": 10, "b": 10},
+        yaxis=dict(autorange="reversed"),
+    )
+    st.plotly_chart(fig_cm, use_container_width=True, config={"displayModeBar": False})
+    st.markdown(
+        f"""<p style="color:{COLORS['text_muted']}; font-size:0.78rem;">
+        Confusion matrix, deployed model, held-out test period. Rows are the true class, columns the
+        model's prediction.
+        </p>""",
+        unsafe_allow_html=True,
+    )
+else:
+    st.markdown(
+        f"""<p style="color:{COLORS['text_muted']}; font-size:0.85rem;">
+        Held-out validation data not found — run the validation export cell in the notebook and add
+        data/{REGION_ID}_model_validation.json.
+        </p>""",
+        unsafe_allow_html=True,
+    )
+
+st.markdown('<hr class="kobo-rule">', unsafe_allow_html=True)
+
+# =================================================================
 # HISTORICAL RECORD
 # =================================================================
 st.markdown('<div class="kobo-label">Historical record · 2000–2024</div>', unsafe_allow_html=True)
@@ -711,6 +886,88 @@ st.markdown(
     </p>""",
     unsafe_allow_html=True,
 )
+
+st.markdown('<hr class="kobo-rule">', unsafe_allow_html=True)
+
+# =================================================================
+# ALERTING STUB — validates and stores a subscription; does not send anything.
+# This demonstrates the last-mile UX, not a production notification pipeline.
+# =================================================================
+EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+SUBSCRIPTIONS_PATH = DATA_DIR / "subscriptions.jsonl"
+
+
+def validate_contact(contact_type, value):
+    value = (value or "").strip()
+    if not value:
+        return False, "Please enter a value."
+    if contact_type == "Email":
+        if not EMAIL_RE.match(value):
+            return False, "That doesn't look like a valid email address."
+    else:
+        parsed = urlparse(value)
+        if parsed.scheme not in ("http", "https") or not parsed.netloc:
+            return False, "Webhook URL must start with http:// or https:// and include a valid host."
+    return True, None
+
+
+def save_subscription(contact_type, value, levels):
+    record = {
+        "contact_type": contact_type,
+        "contact_value": value,
+        "notify_on": levels,
+        "subscribed_at": datetime.now(timezone.utc).isoformat(),
+    }
+    try:
+        with open(SUBSCRIPTIONS_PATH, "a") as f:
+            f.write(json.dumps(record) + "\n")
+        return True, None
+    except Exception as e:
+        return False, str(e)
+
+
+def count_subscriptions():
+    try:
+        with open(SUBSCRIPTIONS_PATH) as f:
+            return sum(1 for _ in f)
+    except FileNotFoundError:
+        return 0
+
+
+st.markdown('<div class="kobo-label">Get notified of status changes</div>', unsafe_allow_html=True)
+sub_count = count_subscriptions()
+sub_count_text = f" · {sub_count} subscriber{'s' if sub_count != 1 else ''} so far" if sub_count > 0 else ""
+st.markdown(
+    f"""<p style="color:{COLORS['text_muted']}; font-size:0.82rem;">
+    Get an alert if Kobo's status moves to Watch or Warning.{sub_count_text}
+    </p>
+    <p style="color:{COLORS['text_muted']}; font-size:0.72rem; font-style:italic;">
+    Design stub — entries are validated and stored, but no notification is actually sent yet,
+    and storage here is local to this deployment (it will not survive the next redeploy).
+    </p>""",
+    unsafe_allow_html=True,
+)
+
+with st.form("subscribe_form", clear_on_submit=True):
+    sub_col1, sub_col2 = st.columns([1, 2])
+    contact_type = sub_col1.radio("Notify me via", ["Email", "Webhook URL"], label_visibility="collapsed")
+    placeholder = "you@example.com" if contact_type == "Email" else "https://hooks.example.com/..."
+    contact_value = sub_col2.text_input("Contact", placeholder=placeholder, label_visibility="collapsed")
+    notify_levels = st.multiselect("Notify me when status becomes", ["Watch", "Warning"], default=["Watch", "Warning"])
+    submitted = st.form_submit_button("Subscribe")
+
+    if submitted:
+        valid, error = validate_contact(contact_type, contact_value)
+        if not valid:
+            st.error(error)
+        elif not notify_levels:
+            st.error("Select at least one status level to be notified about.")
+        else:
+            ok, save_error = save_subscription(contact_type, contact_value.strip(), notify_levels)
+            if ok:
+                st.success("Subscribed — noted for the record. (Design stub: no notification will actually be sent.)")
+            else:
+                st.warning(f"Validation passed, but storage isn't writable in this environment right now. ({save_error})")
 
 st.markdown('<hr class="kobo-rule">', unsafe_allow_html=True)
 

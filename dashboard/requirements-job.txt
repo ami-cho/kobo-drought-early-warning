@@ -1,0 +1,8 @@
+earthengine-api
+ecmwf-opendata
+cfgrib
+xarray
+pandas
+numpy
+scipy
+scikit-learn
