@@ -1,33 +1,33 @@
 {
   "region_id": "kobo",
-  "status": "Warning",
-  "current_class": "Severe",
-  "current_confidence": 0.7552430757857383,
+  "status": "Watch",
+  "current_class": "Moderate",
+  "current_confidence": 0.939046688285879,
   "class_probabilities": {
-    "Moderate": 0.24469290047135217,
-    "Normal": 6.402374290948151e-05,
-    "Severe": 0.7552430757857383
+    "Moderate": 0.939046688285879,
+    "Normal": 0.007607292858375531,
+    "Severe": 0.053346018855745636
   },
-  "forecast_pct_below_normal": 75.75757575757576,
-  "forecast_note": "76% of ensemble members show below-normal rainfall \u2014 high confidence of continued/worsening deficit",
+  "forecast_pct_below_normal": 69.6969696969697,
+  "forecast_note": "70% of ensemble members show below-normal rainfall \u2014 high confidence of continued/worsening deficit",
   "ndvi_date": "2026-08-13",
   "lst_date": "2026-08-29",
   "rain_soil_date": "2026-08-13",
-  "forecast_issued": "2026-09-12 18:00",
+  "forecast_issued": "2026-09-13 00:00",
   "current_vector": {
     "ndvi_anomaly_z": -2.388614768177999,
     "vci": 19.06358095935041,
-    "rainfall_mm": 5.188745473501083,
-    "rain_anomaly_z": -2.831446006692477,
-    "spi_1": -4.753424308822899,
-    "spi_3": -3.397576106106596,
-    "spi_12": -3.0379024366264114,
+    "rainfall_mm": 72.81864899120293,
+    "rain_anomaly_z": -1.9490952487022477,
+    "spi_1": -2.410226389208821,
+    "spi_3": -1.674878067109121,
+    "spi_12": -1.8726885906837856,
     "lst_anomaly_z": -1.1627969408490066,
     "soil_anomaly_z": -0.5278917460394509,
     "soil_percentile": 40.0,
-    "rain_anomaly_z_lag1": -1.187407666360498,
-    "spi_1_lag1": -1.1635573923915215,
-    "spi_3_lag1": -2.3850841912042804,
+    "rain_anomaly_z_lag1": -0.4691688213296327,
+    "spi_1_lag1": -0.3138155984897327,
+    "spi_3_lag1": -1.299690163104489,
     "soil_anomaly_z_lag1": -0.04812576848803683,
     "ndvi_anomaly_z_lag1": -1.023547726836565,
     "lst_anomaly_z_lag1": -1.6501389424733137,
@@ -35,60 +35,60 @@
   },
   "forecast_windows": {
     "1_3": {
-      "median_mm": 0.88671875,
-      "p10_mm": 0.59375,
-      "p90_mm": 1.603515625,
+      "median_mm": 0.751953125,
+      "p10_mm": 0.498046875,
+      "p90_mm": 1.880859375,
       "pct_below_normal": 100.0,
       "n_members": 11
     },
     "4_7": {
-      "median_mm": 10.123046875,
-      "p10_mm": 3.306640625,
-      "p90_mm": 11.509765625,
-      "pct_below_normal": 36.36363636363637,
+      "median_mm": 8.265625,
+      "p10_mm": 6.078125,
+      "p90_mm": 13.345703125,
+      "pct_below_normal": 18.181818181818183,
       "n_members": 11
     },
     "8_15": {
-      "median_mm": 5.755859375,
-      "p10_mm": 2.185546875,
-      "p90_mm": 11.771484375,
+      "median_mm": 5.111328125,
+      "p10_mm": 2.50390625,
+      "p90_mm": 8.25390625,
       "pct_below_normal": 90.9090909090909,
       "n_members": 11
     }
   },
   "top_drivers": [
     {
-      "feature": "spi_3",
-      "coefficient": -1.4243061928822298,
-      "value_z": -3.9612075747126965
-    },
-    {
-      "feature": "vci",
-      "coefficient": -1.1877135646797945,
-      "value_z": -1.0581474636910218
-    },
-    {
-      "feature": "spi_3_lag1",
-      "coefficient": -1.0605297459766685,
-      "value_z": -2.731345878074127
+      "feature": "rain_anomaly_z",
+      "coefficient": -1.273476673654897,
+      "value_z": -2.240647640692202
     },
     {
       "feature": "ndvi_anomaly_z",
-      "coefficient": -1.0410646407364639,
+      "coefficient": 1.1028071154693389,
       "value_z": -2.7114066884027666
     },
     {
-      "feature": "soil_anomaly_z",
-      "coefficient": -0.8087781716363793,
-      "value_z": -0.5012420624793336
+      "feature": "rain_anomaly_z_lag1",
+      "coefficient": -0.5197725945884922,
+      "value_z": -0.5038134971154403
     },
     {
       "feature": "lst_anomaly_z",
-      "coefficient": 0.5742267207228142,
+      "coefficient": -0.5134790482448265,
       "value_z": -1.8975416183011888
+    },
+    {
+      "feature": "soil_anomaly_z",
+      "coefficient": 0.5076870285635139,
+      "value_z": -0.5012420624793336
+    },
+    {
+      "feature": "spi_3",
+      "coefficient": 0.4250323086996575,
+      "value_z": -1.9369625974480655
     }
   ],
-  "computed_at": "2026-09-13 03:25 UTC",
-  "computed_at_iso": "2026-09-13T03:25:15Z",
+  "computed_at": "2026-09-13 11:12 UTC",
+  "computed_at_iso": "2026-09-13T11:12:01Z",
   "refresh_interval_seconds": 21600
 }
