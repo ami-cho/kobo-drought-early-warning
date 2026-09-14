@@ -2,7 +2,8 @@
 
 Machine Learning-Based Drought Risk Mapping and Early Warning System for Raya Kobo Woreda, North Wollo Zone, Amhara Region, Ethiopia.
 
-**Live status (as of last run):** see `dashboard/` — run `streamlit run dashboard/dashboard.py` after populating `dashboard/data/` (see below).
+**Live dashboard**: [kobo-drought-early-warning.streamlit.app](https://kobo-drought-early-warning-gdabadqt9yqzwa5pwurvgt.streamlit.app/)
+**Methodology write-up**: [`docs/METHODOLOGY.md`](docs/METHODOLOGY.md) — data latency, why logistic regression, validation approach, known limitations, and what's next. Read this first if you're skimming.
 
 ## Project summary
 
@@ -10,10 +11,11 @@ An end-to-end system that combines satellite remote sensing, reanalysis climate 
 
 - **Historical record**: 2000-2024, monthly, both woreda-mean and 25-cell spatial grid
 - **Labels**: SPI-6 (6-month Standardized Precipitation Index), chosen specifically to avoid target leakage from the NDVI/LST/soil-moisture predictors
-- **Model**: logistic regression — selected over Random Forest and XGBoost after honest head-to-head comparison (0.834 balanced accuracy / 0.687 macro F1 on validation, vs 0.610-0.657 for the tree ensembles)
-- **Forecast layer**: ECMWF AIFS (deterministic, open data), 1-15 day precipitation outlook blended with the historical-data classifier
+- **Model**: logistic regression — selected over Random Forest and XGBoost after honest head-to-head comparison (0.834 balanced accuracy / 0.687 macro F1 on validation, vs 0.610-0.657 for the tree ensembles); held-out test evaluation and naive-baseline comparison in `docs/METHODOLOGY.md`
+- **Forecast layer**: ECMWF AIFS-ENS (10 perturbed members + control, open data), 1-15 day precipitation outlook with genuine ensemble spread, blended with the historical-data classifier
 - **Backtesting**: median 3-month lead time ahead of documented Severe drought events, with an honestly-reported 64% false alarm rate
-- **Dashboard**: Streamlit, covering current status, spatial risk map, forecast breakdown, and model explainability
+- **Architecture**: live computation is decoupled from the app's request path — a scheduled job (GitHub Actions) runs the Earth Engine/AIFS pull and writes a status file; the Streamlit app only ever reads it
+- **Dashboard**: Streamlit, covering current status, spatial risk map, forecast breakdown, model explainability, and held-out validation metrics
 
 ## Key findings
 
@@ -27,7 +29,9 @@ An end-to-end system that combines satellite remote sensing, reanalysis climate 
 ```
 kobo-drought-early-warning/
 ├── README.md
-├── requirements.txt
+├── .github/workflows/
+│   ├── refresh_status.yml            # scheduled job: Earth Engine + AIFS -> status cache (cron, every 6h)
+│   └── test_region_abstraction.yml   # CI: proves region_id parameterization on every push
 ├── data/
 │   ├── raw/          # boundary file (COD-AB Kobo woreda extract)
 │   ├── processed/     # combined feature tables (region-level + grid-level)
@@ -36,8 +40,16 @@ kobo-drought-early-warning/
 ├── figures/            # exported charts (correlation matrix, time series, cell accuracy map)
 ├── maps/                # grid cell geometries + performance (GeoJSON)
 ├── notebooks/            # main Colab/Jupyter notebook, full pipeline
-├── docs/                  # DATA_SOURCES.md — data provenance and methodology notes
-└── dashboard/               # Streamlit dashboard app + its own data/ folder
+├── docs/                  # METHODOLOGY.md, CASE_STUDY.md, DATA_SOURCES.md
+└── dashboard/               # deployed Streamlit app + its own data/ folder
+    ├── dashboard.py             # UI only -- reads status via status_reader, never computes it
+    ├── status_reader.py         # lightweight read-through cache the app actually uses
+    ├── live_status.py           # pure computation module (Earth Engine + AIFS), zero Streamlit dependency
+    ├── refresh_job.py           # CLI entry point the scheduled job runs (--region <id>)
+    ├── region_config.py         # region registry -- adding a region is a config change here
+    ├── test_region_abstraction.py  # committed proof that region_id genuinely parameterizes the pipeline
+    ├── requirements.txt         # app-only deps (no Earth Engine/AIFS -- those aren't in the request path)
+    └── requirements-job.txt     # job-only deps (Earth Engine, AIFS, cfgrib, etc.)
 ```
 
 ## Data sources
@@ -53,20 +65,9 @@ kobo-drought-early-warning/
 
 Full provenance and methodology notes: `docs/DATA_SOURCES.md`.
 
-## Methodology highlights
+## Methodology and limitations
 
-1. **Leakage avoidance**: drought labels are derived solely from SPI-6 (a precipitation-only index), never from the NDVI/VCI/LST/soil-moisture features used as predictors.
-2. **Temporal validation split**: train 2000-2012, validation 2013-2020, test 2021-2024 — redrawn from an initial naive split after discovering the original validation window happened to contain zero drought-class months.
-3. **Baseline-first**: VCI threshold, SPI-3 threshold, and logistic regression were all evaluated before Random Forest/XGBoost, establishing an honest bar for the more complex models to clear.
-4. **Spatial modeling**: a 25-cell (~11km, ERA5-Land-resolution) grid was built after an initial region-mean-only model, to produce genuine sub-woreda risk maps rather than a single areal average.
-5. **Backtesting**: lead-time-to-event and false-alarm rate were both measured and reported, not just accuracy metrics.
-
-## Limitations
-
-- 25-year historical record with rare severe-drought events (13 Moderate / 4 Severe months in the training set) limits how much any model — especially tree ensembles — could learn about the rare classes.
-- 64% false alarm rate on elevated (Moderate/Severe) predictions, a direct consequence of the `class_weight="balanced"` choice favoring recall over precision.
-- The current live dashboard blends data sources with different real-world processing lags (NDVI/LST ~2-4 weeks, CHIRPS/soil moisture ~1-2 months) — displayed explicitly rather than presented as uniformly "current."
-- The AIFS forecast is a single deterministic run, not an ensemble; it represents one plausible scenario, not a probabilistic forecast.
+Full technical write-up — data latency table, why logistic regression was chosen over the tree ensembles, temporal validation approach, known failure modes, and what's next — lives in [`docs/METHODOLOGY.md`](docs/METHODOLOGY.md), kept as the single source of truth rather than duplicated here.
 
 ## Author
 

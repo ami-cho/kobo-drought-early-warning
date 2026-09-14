@@ -1,0 +1,26 @@
+name: Test region abstraction
+
+on:
+  push:
+    paths:
+      - 'dashboard/live_status.py'
+      - 'dashboard/test_region_abstraction.py'
+  workflow_dispatch: {}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install minimal dependencies (only what load_artifacts needs)
+        run: pip install earthengine-api pandas numpy scipy scikit-learn
+
+      - name: Run region abstraction proof
+        run: python dashboard/test_region_abstraction.py

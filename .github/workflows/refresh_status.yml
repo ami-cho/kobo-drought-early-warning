@@ -3,7 +3,12 @@ name: Refresh live drought status
 on:
   schedule:
     - cron: '0 */6 * * *'  # every 6 hours
-  workflow_dispatch: {}     # allows a manual "Run workflow" trigger from the Actions tab
+  workflow_dispatch:
+    inputs:
+      region:
+        description: 'Region ID to refresh (see region_config.py). Defaults to kobo.'
+        required: false
+        default: 'kobo'
 
 jobs:
   refresh:
@@ -26,12 +31,12 @@ jobs:
       - name: Run refresh job
         env:
           GEE_SERVICE_ACCOUNT_JSON: ${{ secrets.GEE_SERVICE_ACCOUNT_JSON }}
-        run: python dashboard/refresh_job.py
+        run: python dashboard/refresh_job.py --region "${{ github.event.inputs.region || 'kobo' }}"
 
       - name: Commit and push if the status changed
         run: |
           git config user.name "kobo-refresh-bot"
           git config user.email "actions@github.com"
-          git add dashboard/data/kobo_live_status_cache.json
+          git add dashboard/data/*_live_status_cache.json
           git diff --staged --quiet || git commit -m "Automated status refresh"
           git push
