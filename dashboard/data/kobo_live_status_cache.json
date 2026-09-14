@@ -8,12 +8,12 @@
     "Normal": 0.015594145974312029,
     "Severe": 0.02732379086616539
   },
-  "forecast_pct_below_normal": 81.81818181818181,
-  "forecast_note": "82% of ensemble members show below-normal rainfall \u2014 high confidence of continued/worsening deficit",
+  "forecast_pct_below_normal": 87.87878787878788,
+  "forecast_note": "88% of ensemble members show below-normal rainfall \u2014 high confidence of continued/worsening deficit",
   "ndvi_date": "2026-08-13",
   "lst_date": "2026-08-29",
   "rain_soil_date": "2026-08-14",
-  "forecast_issued": "2026-09-14 06:00",
+  "forecast_issued": "2026-09-14 12:00",
   "current_vector": {
     "ndvi_anomaly_z": -2.388614768177999,
     "vci": 19.06358095935041,
@@ -35,23 +35,23 @@
   },
   "forecast_windows": {
     "1_3": {
-      "median_mm": 1.76953125,
-      "p10_mm": 0.9375,
-      "p90_mm": 4.001953125,
+      "median_mm": 1.521484375,
+      "p10_mm": 1.04296875,
+      "p90_mm": 3.4111328125,
       "pct_below_normal": 100.0,
       "n_members": 11
     },
     "4_7": {
-      "median_mm": 6.94921875,
-      "p10_mm": 3.328125,
-      "p90_mm": 16.400390625,
-      "pct_below_normal": 45.45454545454545,
+      "median_mm": 5.939453125,
+      "p10_mm": 2.63671875,
+      "p90_mm": 13.90234375,
+      "pct_below_normal": 63.63636363636363,
       "n_members": 11
     },
     "8_15": {
-      "median_mm": 3.76171875,
-      "p10_mm": 1.052734375,
-      "p90_mm": 5.14453125,
+      "median_mm": 2.1796875,
+      "p10_mm": 1.08984375,
+      "p90_mm": 4.732421875,
       "pct_below_normal": 100.0,
       "n_members": 11
     }
@@ -88,7 +88,7 @@
       "value_z": -1.7052909469289659
     }
   ],
-  "computed_at": "2026-09-14 17:50 UTC",
-  "computed_at_iso": "2026-09-14T17:50:23Z",
+  "computed_at": "2026-09-14 21:35 UTC",
+  "computed_at_iso": "2026-09-14T21:35:36Z",
   "refresh_interval_seconds": 21600
 }
