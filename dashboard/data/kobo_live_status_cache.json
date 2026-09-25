@@ -13,7 +13,7 @@
   "ndvi_date": "2026-08-29",
   "lst_date": "2026-09-14",
   "rain_soil_date": "2026-08-25",
-  "forecast_issued": "2026-09-25 06:00",
+  "forecast_issued": "2026-09-25 12:00",
   "current_vector": {
     "ndvi_anomaly_z": -0.07787610679442608,
     "vci": 63.22801483784261,
@@ -35,24 +35,24 @@
   },
   "forecast_windows": {
     "1_3": {
-      "median_mm": 1.3046875,
-      "p10_mm": 0.54296875,
-      "p90_mm": 2.1796875,
+      "median_mm": 1.291015625,
+      "p10_mm": 0.44140625,
+      "p90_mm": 2.4296875,
       "pct_below_normal": 100.0,
       "n_members": 11
     },
     "4_7": {
-      "median_mm": 2.732421875,
-      "p10_mm": 0.53125,
-      "p90_mm": 6.279296875,
-      "pct_below_normal": 90.9090909090909,
+      "median_mm": 1.17578125,
+      "p10_mm": 0.71484375,
+      "p90_mm": 4.958984375,
+      "pct_below_normal": 100.0,
       "n_members": 11
     },
     "8_15": {
-      "median_mm": 2.72265625,
-      "p10_mm": 1.515625,
-      "p90_mm": 6.6640625,
-      "pct_below_normal": 100.0,
+      "median_mm": 5.01953125,
+      "p10_mm": 1.91796875,
+      "p90_mm": 10.6171875,
+      "pct_below_normal": 90.9090909090909,
       "n_members": 11
     }
   },
@@ -88,7 +88,7 @@
       "value_z": -1.7111867252236994
     }
   ],
-  "computed_at": "2026-09-25 16:41 UTC",
-  "computed_at_iso": "2026-09-25T16:41:11Z",
+  "computed_at": "2026-09-25 21:10 UTC",
+  "computed_at_iso": "2026-09-25T21:10:44Z",
   "refresh_interval_seconds": 21600
 }
