@@ -5,15 +5,15 @@
   "current_confidence": 0.9991437952006973,
   "class_probabilities": {
     "Moderate": 0.9991437952006973,
-    "Normal": 0.0008561816833808128,
+    "Normal": 0.0008561816833808127,
     "Severe": 2.311592195458881e-08
   },
-  "forecast_pct_below_normal": 60.6060606060606,
-  "forecast_note": "Forecast uncertain \u2014 ensemble members split (61% below normal), no strong consensus either way",
+  "forecast_pct_below_normal": 75.75757575757575,
+  "forecast_note": "76% of ensemble members show below-normal rainfall \u2014 high confidence of continued/worsening deficit",
   "ndvi_date": "2026-09-14",
   "lst_date": "2026-09-22",
   "rain_soil_date": "2026-08-07",
-  "forecast_issued": "2026-10-07 06:00",
+  "forecast_issued": "2026-10-07 12:00",
   "current_vector": {
     "ndvi_anomaly_z": 1.3946443663471315,
     "vci": 92.00304707761269,
@@ -35,24 +35,24 @@
   },
   "forecast_windows": {
     "1_3": {
-      "median_mm": 0.197265625,
-      "p10_mm": 0.060546875,
-      "p90_mm": 0.453125,
+      "median_mm": 0.162109375,
+      "p10_mm": 0.041015625,
+      "p90_mm": 0.32421875,
       "pct_below_normal": 100.0,
       "n_members": 11
     },
     "4_7": {
-      "median_mm": 7.416015625,
-      "p10_mm": 3.625,
-      "p90_mm": 12.05859375,
-      "pct_below_normal": 18.181818181818183,
+      "median_mm": 4.056640625,
+      "p10_mm": 0.798828125,
+      "p90_mm": 10.04296875,
+      "pct_below_normal": 54.54545454545454,
       "n_members": 11
     },
     "8_15": {
-      "median_mm": 5.796875,
-      "p10_mm": 1.44140625,
-      "p90_mm": 16.1171875,
-      "pct_below_normal": 63.63636363636363,
+      "median_mm": 5.072265625,
+      "p10_mm": 2.451171875,
+      "p90_mm": 13.578125,
+      "pct_below_normal": 72.72727272727273,
       "n_members": 11
     }
   },
@@ -88,7 +88,7 @@
       "value_z": -1.7052909469289659
     }
   ],
-  "computed_at": "2026-10-07 12:46 UTC",
-  "computed_at_iso": "2026-10-07T12:46:20Z",
+  "computed_at": "2026-10-07 22:48 UTC",
+  "computed_at_iso": "2026-10-07T22:48:52Z",
   "refresh_interval_seconds": 21600
 }
