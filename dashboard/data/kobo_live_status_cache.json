@@ -8,12 +8,12 @@
     "Normal": 0.000998063480428832,
     "Severe": 1.295038263250112e-08
   },
-  "forecast_pct_below_normal": 66.66666666666667,
-  "forecast_note": "67% of ensemble members show below-normal rainfall \u2014 high confidence of continued/worsening deficit",
+  "forecast_pct_below_normal": 72.72727272727273,
+  "forecast_note": "73% of ensemble members show below-normal rainfall \u2014 high confidence of continued/worsening deficit",
   "ndvi_date": "2026-09-14",
   "lst_date": "2026-09-22",
-  "rain_soil_date": "2026-08-11",
-  "forecast_issued": "2026-10-11 12:00",
+  "rain_soil_date": "2026-08-12",
+  "forecast_issued": "2026-10-11 18:00",
   "current_vector": {
     "ndvi_anomaly_z": 1.3946443663471315,
     "vci": 92.00304707761269,
@@ -21,7 +21,7 @@
     "rain_anomaly_z": -1.7324248555055044,
     "spi_1": -2.004026144477736,
     "spi_3": -1.47771798889573,
-    "spi_12": -1.712726136784424,
+    "spi_12": -1.7127261367844238,
     "lst_anomaly_z": -2.4570024351998168,
     "soil_anomaly_z": -1.9124671712896055,
     "soil_percentile": 0.0,
@@ -35,24 +35,24 @@
   },
   "forecast_windows": {
     "1_3": {
-      "median_mm": 4.73046875,
-      "p10_mm": 2.44140625,
-      "p90_mm": 10.126953125,
-      "pct_below_normal": 27.27272727272727,
+      "median_mm": 5.119140625,
+      "p10_mm": 2.474609375,
+      "p90_mm": 7.125,
+      "pct_below_normal": 36.36363636363637,
       "n_members": 11
     },
     "4_7": {
-      "median_mm": 2.509765625,
-      "p10_mm": 1.150390625,
-      "p90_mm": 5.947265625,
-      "pct_below_normal": 72.72727272727273,
+      "median_mm": 1.966796875,
+      "p10_mm": 1.294921875,
+      "p90_mm": 3.056640625,
+      "pct_below_normal": 100.0,
       "n_members": 11
     },
     "8_15": {
-      "median_mm": 0.734375,
-      "p10_mm": 0.03515625,
-      "p90_mm": 4.033203125,
-      "pct_below_normal": 100.0,
+      "median_mm": 0.5234375,
+      "p10_mm": 0.2265625,
+      "p90_mm": 9.83203125,
+      "pct_below_normal": 81.81818181818183,
       "n_members": 11
     }
   },
@@ -88,7 +88,7 @@
       "value_z": -1.7052909469289674
     }
   ],
-  "computed_at": "2026-10-11 21:42 UTC",
-  "computed_at_iso": "2026-10-11T21:42:29Z",
+  "computed_at": "2026-10-12 04:34 UTC",
+  "computed_at_iso": "2026-10-12T04:34:17Z",
   "refresh_interval_seconds": 21600
 }
