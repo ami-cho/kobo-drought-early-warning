@@ -762,5 +762,5 @@ protocols = [
         "trigger": "Predicted Class: Moderate OR >60% of AIFS ensemble members below normal rainfall",
         "water": "Audit shallow well water tables and motorized scheme functionality in lowland kebeles.",
         "crops": "Conduct field spot-checks on sorghum/teff moisture stress; advise on tie-ridging & moisture conservation.",
-        "livestock": "Assess browse
+        "livestock": "Assess browse and forage deficits in eastern lowland grazing corridors.",
     }
