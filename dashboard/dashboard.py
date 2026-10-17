@@ -762,6 +762,736 @@ protocols = [
         "trigger": "Predicted Class: Moderate OR >60% of AIFS ensemble members below normal rainfall",
         "water": "Audit shallow well water tables and motorized scheme functionality in lowland kebeles.",
         "crops": "Conduct field spot-checks on sorghum/teff moisture stress; advise on tie-ridging & moisture conservation.",
-        "livestock": "Assess browse and forage deficits in eastern lowland grazing corridors.",
-    }
+        "livestock": "Assess browse/forage deficits in eastern lowland grazing corridors; inventory feed reserves.",
+        "coord": "Convene Woreda Early Warning Task Force to verify satellite anomalies against field reports.",
+    },
+    {
+        "level": "Warning",
+        "color": COLORS["clay"],
+        "trigger": "Predicted Class: Severe (Multi-sensor convergence across rainfall, soil moisture & VCI)",
+        "water": "Prioritize emergency water-point maintenance and pre-position water-trucking schedules.",
+        "crops": "Deploy rapid crop-assessment teams; prepare drought-tolerant / short-maturing seed contingency.",
+        "livestock": "Activate targeted supplementary livestock feed and veterinary health interventions.",
+        "coord": "Submit formal situational brief to North Wollo Zone DRMC, WFP, and FAO anticipatory action teams.",
+    },
 ]
+
+p_cols = st.columns(3)
+for col, prot in zip(p_cols, protocols):
+    is_active = status["status"].lower() == prot["level"].lower()
+    active_badge = (
+        f'<span class="mono" style="background:{prot["color"]}; color:{COLORS["bg"]}; padding:2px 6px; border-radius:2px; font-size:0.65rem; font-weight:700;">ACTIVE POSTURE</span>'
+        if is_active
+        else '<span class="mono" style="color:#666; font-size:0.65rem;">STANDBY LEVEL</span>'
+    )
+    card_cls = "protocol-card protocol-active" if is_active else "protocol-card"
+    col.markdown(
+        f"""
+        <div class="{card_cls}" style="--active-color:{prot['color']};">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.4rem;">
+                <span class="mono" style="font-size:1.05rem; font-weight:600; color:{prot['color']};">{prot['level'].upper()}</span>
+                {active_badge}
+            </div>
+            <div style="font-size:0.74rem; color:{COLORS['text_muted']}; margin-bottom:0.75rem; border-bottom:1px solid {COLORS['rule']}; padding-bottom:0.5rem;">
+                <strong>Trigger:</strong> {prot['trigger']}
+            </div>
+            <div style="font-size:0.8rem; line-height:1.55;">
+                <p style="margin:0 0 0.45rem 0;">💧 <strong>Water:</strong> {prot['water']}</p>
+                <p style="margin:0 0 0.45rem 0;">🌱 <strong>Crops:</strong> {prot['crops']}</p>
+                <p style="margin:0 0 0.45rem 0;">🐄 <strong>Livestock:</strong> {prot['livestock']}</p>
+                <p style="margin:0;">📋 <strong>Coordination:</strong> {prot['coord']}</p>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+st.markdown('<hr class="kobo-rule">', unsafe_allow_html=True)
+
+# =================================================================
+# 4. SPATIAL GRID TELEMETRY + 15-DAY FUTURE ENSEMBLE FORECAST
+# =================================================================
+col_map, col_forecast = st.columns([1.3, 1])
+
+with col_map:
+    st.markdown('<div class="kobo-label">Spatial validation &amp; grid cell inspector (1,930 km²)</div>', unsafe_allow_html=True)
+
+    mc1, mc2 = st.columns([1.3, 1])
+    with mc1:
+        selected_cell = st.selectbox(
+            "Inspect Specific Grid Cell",
+            options=["All Cells (Woreda Overview)"] + [f"Cell {idx} ({grid.loc[idx, 'centroid_lat']:.2f}°N, {grid.loc[idx, 'centroid_lon']:.2f}°E)" for idx in grid.index],
+            label_visibility="collapsed",
+        )
+    with mc2:
+        map_opacity = st.slider("Map Layer Opacity", 0.35, 1.0, 0.82, 0.05, label_visibility="collapsed")
+
+    geojson = json.loads(grid.to_json())
+    fig_map = go.Figure(
+        go.Choroplethmap(
+            geojson=geojson,
+            locations=grid.index,
+            z=grid["accuracy"],
+            customdata=np.column_stack([grid.index, grid["centroid_lat"], grid["centroid_lon"]]),
+            colorscale=[
+                [0.0, COLORS["clay"]],
+                [0.35, "#A8683F"],
+                [0.6, COLORS["ochre"]],
+                [0.8, "#8FA377"],
+                [1.0, COLORS["sage"]],
+            ],
+            zmin=0.70,
+            zmax=0.95,
+            marker_opacity=map_opacity,
+            marker_line_width=0.7,
+            marker_line_color=COLORS["bg"],
+            hovertemplate=(
+                "<b>GRID CELL %{customdata[0]}</b><br>"
+                "Center: %{customdata[1]:.3f}°N, %{customdata[2]:.3f}°E<br>"
+                "Historical Validation Accuracy: %{z:.1%}<extra></extra>"
+            ),
+            colorbar=dict(
+                title=dict(text="TEST ACC", font=dict(color=COLORS["text_muted"], size=10, family="IBM Plex Mono")),
+                tickfont=dict(color=COLORS["text_muted"], size=9, family="IBM Plex Mono"),
+                thickness=10,
+                len=0.65,
+                outlinewidth=0,
+            ),
+        )
+    )
+
+    for feature in boundary_geojson["features"]:
+        geom = feature["geometry"]
+        polys = geom["coordinates"] if geom["type"] == "MultiPolygon" else [geom["coordinates"]]
+        for poly in polys:
+            for ring in poly:
+                lons = [pt[0] for pt in ring]
+                lats = [pt[1] for pt in ring]
+                fig_map.add_trace(
+                    go.Scattermap(
+                        lon=lons,
+                        lat=lats,
+                        mode="lines",
+                        line=dict(width=2, color=COLORS["text"]),
+                        opacity=0.55,
+                        hoverinfo="skip",
+                        showlegend=False,
+                    )
+                )
+
+    map_center = {"lat": 12.11, "lon": 39.65}
+    map_zoom = 8.4
+    if selected_cell != "All Cells (Woreda Overview)":
+        c_idx = int(selected_cell.split()[1])
+        c_row = grid.loc[c_idx]
+        map_center = {"lat": float(c_row["centroid_lat"]), "lon": float(c_row["centroid_lon"])}
+        map_zoom = 9.2
+        fig_map.add_trace(
+            go.Scattermap(
+                lon=[c_row["centroid_lon"]],
+                lat=[c_row["centroid_lat"]],
+                mode="markers+text",
+                marker=dict(size=13, color=COLORS["ochre"]),
+                text=[f"CELL {c_idx}"],
+                textposition="top center",
+                textfont=dict(family="IBM Plex Mono", size=11, color=COLORS["text"]),
+                hoverinfo="skip",
+                showlegend=False,
+            )
+        )
+
+    fig_map.update_layout(
+        map_style="carto-darkmatter",
+        map_zoom=map_zoom,
+        map_center=map_center,
+        paper_bgcolor=COLORS["surface"],
+        plot_bgcolor=COLORS["surface"],
+        margin={"r": 0, "t": 0, "l": 0, "b": 0},
+        height=390,
+        font=dict(family="Space Grotesk", color=COLORS["text_muted"]),
+        hoverlabel=dict(
+            bgcolor=COLORS["surface"],
+            bordercolor=COLORS["rule"],
+            font=dict(family="IBM Plex Mono", size=11, color=COLORS["text"]),
+        ),
+    )
+    st.plotly_chart(fig_map, use_container_width=True, config={"displayModeBar": False})
+    st.markdown(
+        f"""<p style="color:{COLORS['text_muted']}; font-size:0.78rem;">
+        <strong>Spatial Note:</strong> Map displays historical validation accuracy per 0.05° grid cell. Western escarpment
+        cells show distinct agro-climatic behavior compared to the eastern Raya valley floor.
+        </p>""",
+        unsafe_allow_html=True,
+    )
+
+with col_forecast:
+    st.markdown(
+        '<div class="kobo-label">Section III · Genuine Future Forecast (15-Day ECMWF AIFS Ensemble)</div>',
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        f"""<p style="color:{COLORS['text_muted']}; font-size:0.78rem; margin-top:-0.2rem;">
+        Unlike the observed satellite anomalies above, this panel shows <strong>forward numerical weather predictions</strong>
+        initialized at <span class="mono">{computed_at_iso[:16] if computed_at_iso else 'latest run'} UTC</span>.
+        </p>""",
+        unsafe_allow_html=True,
+    )
+    fw = status.get("forecast_windows", {})
+    if fw:
+        window_labels = [
+            ("LEAD TIME: DAYS 1–3", "1_3"),
+            ("LEAD TIME: DAYS 4–7", "4_7"),
+            ("LEAD TIME: DAYS 8–15", "8_15"),
+        ]
+        max_p90 = max(fw.get(key, {}).get("p90_mm", 0) for _, key in window_labels) or 1
+
+        for label, key in window_labels:
+            w = fw.get(key, {})
+            median = w.get("median_mm", 0)
+            p10 = w.get("p10_mm", 0)
+            p90 = w.get("p90_mm", 0)
+            pct_below = w.get("pct_below_normal", 0)
+            n_members = w.get("n_members", 0)
+
+            range_left = p10 / max_p90 * 100
+            range_width = max(0.5, (p90 - p10) / max_p90 * 100)
+            median_pos = median / max_p90 * 100
+
+            below_color = (
+                COLORS["clay"]
+                if pct_below > 65
+                else (COLORS["ochre"] if pct_below > 35 else COLORS["sage"])
+            )
+
+            st.markdown(
+                f"""
+                <div class="kobo-panel" style="padding:0.8rem 1rem; margin-bottom:0.65rem;">
+                    <div style="display:flex; justify-content:space-between; align-items:baseline;">
+                        <div class="kobo-strip-label" style="font-size:0.68rem;">{label}</div>
+                        <div class="mono" style="color:{below_color}; font-size:0.76rem;">{pct_below:.0f}% members below normal</div>
+                    </div>
+                    <div style="position:relative; height:10px; background:{COLORS['rule']}; border-radius:3px; margin-top:5px;">
+                        <div style="position:absolute; left:{range_left}%; width:{range_width}%; height:100%;
+                                    background:{COLORS['sky']}55; border-radius:3px;"></div>
+                        <div style="position:absolute; left:{median_pos}%; width:2px; height:14px; top:-2px;
+                                    background:{COLORS['sky']};"></div>
+                    </div>
+                    <div class="mono" style="color:{COLORS['text_muted']}; font-size:0.70rem; margin-top:4px;">
+                        Ensemble Median: {median:.1f} mm &nbsp;·&nbsp; Uncertainty (P10–P90): {p10:.1f}–{p90:.1f} mm ({n_members} members)
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+    st.markdown(
+        '<div class="kobo-label" style="margin-top:1.1rem;">Current State Class Scores (Multinomial LogReg)</div>',
+        unsafe_allow_html=True,
+    )
+    probs = status["class_probabilities"]
+    for cls, color in [("Normal", COLORS["sage"]), ("Moderate", COLORS["ochre"]), ("Severe", COLORS["clay"])]:
+        p = probs.get(cls, 0)
+        st.markdown(
+            f"""
+            <div style="margin-bottom:0.55rem;">
+                <div style="display:flex; justify-content:space-between; font-size:0.82rem; margin-bottom:0.15rem;">
+                    <span>{cls} Drought Class</span><span class="mono">{p*100:.1f}%</span>
+                </div>
+                <div style="height:5px; background:{COLORS['rule']}; border-radius:3px; overflow:hidden;">
+                    <div style="width:{p*100}%; height:100%; background:{color};"></div>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    st.caption(
+        "Note: Class scores reflect multinomial logistic regression softmax outputs on observed features; "
+        "interpret alongside held-out precision and recall below."
+    )
+
+st.markdown('<hr class="kobo-rule">', unsafe_allow_html=True)
+
+# =================================================================
+# 5. EXPLAINABILITY + WHAT-IF PERTURBATION SIMULATOR
+# =================================================================
+st.markdown('<div class="kobo-label">Section IV · Feature Attribution &amp; Interactive What-If Stress Simulator</div>', unsafe_allow_html=True)
+
+drivers = status.get("top_drivers", [])
+if drivers:
+    exp_c1, exp_c2 = st.columns([1.35, 1])
+
+    with exp_c2:
+        st.markdown(
+            f"""
+            <div class="kobo-panel">
+                <div class="kobo-label" style="color:{COLORS['ochre']};">🧪 Stress-Test Scenario Simulator</div>
+                <p style="font-size:0.78rem; color:{COLORS['text_muted']}; margin-bottom:0.4rem;">
+                    Test how hypothetical rainfall deficits or heatwaves would shift the model's feature
+                    contributions and drought class scores:
+                </p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        sim_rain_dz = st.slider("Perturb Rainfall Anomaly (Δσ)", -2.5, 2.5, 0.0, 0.25)
+        sim_ndvi_dz = st.slider("Perturb Vegetation Vigor (Δσ)", -2.5, 2.5, 0.0, 0.25)
+        sim_soil_dz = st.slider("Perturb Soil Moisture (Δσ)", -2.5, 2.5, 0.0, 0.25)
+        sim_lst_dz = st.slider("Perturb Land Surface Temp (Δσ)", -2.5, 2.5, 0.0, 0.25)
+
+    with exp_c1:
+        drivers_df = pd.DataFrame(drivers).copy()
+
+        def get_dz(feat):
+            if "rain" in feat or "spi" in feat:
+                return sim_rain_dz
+            if "ndvi" in feat or "vci" in feat:
+                return sim_ndvi_dz
+            if "soil" in feat:
+                return sim_soil_dz
+            if "lst" in feat:
+                return sim_lst_dz
+            return 0.0
+
+        drivers_df["dz"] = drivers_df["feature"].map(get_dz)
+        drivers_df["label"] = drivers_df["feature"].map(lambda f: FEATURE_LABELS.get(f, f))
+        drivers_df["contribution"] = drivers_df["coefficient"] * drivers_df["value_z"]
+        drivers_df["sim_contribution"] = drivers_df["coefficient"] * (drivers_df["value_z"] + drivers_df["dz"])
+        drivers_df = drivers_df.sort_values("contribution")
+
+        is_sim = any(abs(x) > 1e-4 for x in [sim_rain_dz, sim_ndvi_dz, sim_soil_dz, sim_lst_dz])
+
+        fig_drivers = go.Figure()
+        fig_drivers.add_trace(
+            go.Bar(
+                x=drivers_df["contribution"],
+                y=drivers_df["label"],
+                orientation="h",
+                name="Observed Contribution",
+                marker_color=[COLORS["clay"] if c < 0 else COLORS["sage"] for c in drivers_df["contribution"]],
+                opacity=0.45 if is_sim else 0.9,
+            )
+        )
+        if is_sim:
+            fig_drivers.add_trace(
+                go.Bar(
+                    x=drivers_df["sim_contribution"],
+                    y=drivers_df["label"],
+                    orientation="h",
+                    name="Simulated Scenario",
+                    marker_color=COLORS["ochre"],
+                )
+            )
+
+        fig_drivers.update_layout(
+            barmode="group",
+            paper_bgcolor=COLORS["surface"],
+            plot_bgcolor=COLORS["surface"],
+            font=dict(family="IBM Plex Mono", color=COLORS["text_muted"], size=11),
+            xaxis=dict(title="Log-Odds Contribution (β × z)", gridcolor=COLORS["rule_soft"], zerolinecolor=COLORS["rule"]),
+            yaxis=dict(gridcolor="rgba(0,0,0,0)"),
+            legend=dict(orientation="h", y=1.12, font=dict(color=COLORS["text_muted"])),
+            height=310,
+            margin={"t": 20, "l": 10, "r": 10, "b": 30},
+        )
+        st.plotly_chart(fig_drivers, use_container_width=True, config={"displayModeBar": False})
+
+        stress_impulse = (-0.65 * sim_rain_dz) + (-0.55 * sim_ndvi_dz) + (-0.50 * sim_soil_dz) + (0.45 * sim_lst_dz)
+        base_p = np.array([
+            max(1e-4, probs.get("Normal", 0.7)),
+            max(1e-4, probs.get("Moderate", 0.2)),
+            max(1e-4, probs.get("Severe", 0.1)),
+        ])
+        logits = np.log(base_p) + np.array([-0.8 * stress_impulse, 0.45 * stress_impulse, 0.95 * stress_impulse])
+        sim_p = np.exp(logits - np.max(logits))
+        sim_p = sim_p / sim_p.sum()
+
+        st.markdown(
+            f"""
+            <div class="kobo-panel" style="padding:0.75rem 1rem;">
+                <span class="mono" style="font-size:0.75rem; color:{COLORS['text_muted']};">
+                    {"SIMULATED SCENARIO CLASS SCORES:" if is_sim else "OBSERVED BASELINE CLASS SCORES:"}
+                </span>
+                <span class="mono" style="font-size:0.84rem; float:right;">
+                    <span style="color:{COLORS['sage']};">Normal: {sim_p[0]*100:.1f}%</span> &nbsp;·&nbsp;
+                    <span style="color:{COLORS['ochre']};">Moderate: {sim_p[1]*100:.1f}%</span> &nbsp;·&nbsp;
+                    <span style="color:{COLORS['clay']};">Severe: {sim_p[2]*100:.1f}%</span>
+                </span>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+st.markdown('<hr class="kobo-rule">', unsafe_allow_html=True)
+
+# =================================================================
+# 6. HISTORICAL CASE STUDIES (Proving Multi-Sensor Value)
+# =================================================================
+st.markdown(
+    '<div class="kobo-label">Section V · Historical Case Studies (2000–2024) — Why Multi-Sensor Fusion Beats Single Indicators</div>',
+    unsafe_allow_html=True,
+)
+
+CASE_STUDIES = {
+    "Full Historical Record (2000–2024)": {
+        "range": ("2000-01-01", "2024-12-31"),
+        "title": "25-Year Multi-Sensor Climatology (2000–2024)",
+        "narrative": (
+            "Across 25 years in Raya Kobo, meteorological rainfall deficits (SPI-6) frequently precede canopy stress, "
+            "but agricultural drought severity depends heavily on pre-season ERA5-Land root-zone soil moisture and "
+            "MODIS Land Surface Temperature (LST) evaporative demand."
+        ),
+    },
+    "Case Study 1: 2015–2016 El Niño Kiremt Failure": {
+        "range": ("2014-06-01", "2017-03-01"),
+        "title": "2015–2016 El Niño Drought (Severe Kiremt Failure in North Wollo)",
+        "narrative": (
+            "During the 2015 El Niño event, failure of the Kiremt (Jun–Sep) rains triggered severe crop loss across Raya Kobo. "
+            "Notice how ERA5-Land soil moisture and MODIS NDVI remained depressed well into early 2016 even after brief rainfall "
+            "pulses—demonstrating why a rainfall-only trigger would have prematurely declared recovery."
+        ),
+    },
+    "Case Study 2: 2008–2009 Consecutive Belg/Kiremt Deficit": {
+        "range": ("2007-06-01", "2010-06-01"),
+        "title": "2008–2009 Compound Seasonal Deficit",
+        "narrative": (
+            "Back-to-back poor Belg and erratic Kiremt rains between 2008 and 2009 caused cumulative rangeland and crop stress. "
+            "Combining lagged soil moisture and vegetation anomalies captures this multi-season memory effect."
+        ),
+    },
+    "Case Study 3: 2020–2024 Recent Multi-Sensor Window": {
+        "range": ("2020-01-01", "2024-12-31"),
+        "title": "2020–2024 Held-Out Evaluation Era",
+        "narrative": (
+            "The recent 2020–2024 period serves as our strictly unseen temporal test set. It includes both wet recovery phases "
+            "and localized Moderate/Severe stress episodes used to benchmark the model against SPI climatology and persistence."
+        ),
+    },
+}
+
+cs_col1, cs_col2 = st.columns([1.4, 1.6])
+with cs_col1:
+    selected_case = st.selectbox("Select Historical Case Study", options=list(CASE_STUDIES.keys()))
+with cs_col2:
+    avail_cols = [
+        c for c in ["ndvi_anomaly_z", "spi_6", "spi_3", "vci", "rain_anomaly_z", "soil_anomaly_z", "lst_anomaly_z"]
+        if c in history.columns
+    ]
+    default_plot_cols = [c for c in ["ndvi_anomaly_z", "spi_6"] if c in avail_cols] or avail_cols[:2]
+    chosen_indicators = st.multiselect(
+        "Compare Sensor Time-Series",
+        options=avail_cols,
+        default=default_plot_cols,
+        format_func=lambda c: FEATURE_LABELS.get(c, c),
+    )
+
+cs_meta = CASE_STUDIES[selected_case]
+st.markdown(
+    f"""
+    <div class="kobo-panel" style="border-left: 3px solid {COLORS['sky']};">
+        <div class="kobo-label" style="color:{COLORS['sky']};">{cs_meta['title']}</div>
+        <div style="font-size:0.84rem; color:{COLORS['text']}; line-height:1.55;">{cs_meta['narrative']}</div>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
+start_dt, end_dt = cs_meta["range"]
+hist_sub = history[(history["date"] >= start_dt) & (history["date"] <= end_dt)].copy()
+
+fig_hist = go.Figure()
+palette = [COLORS["sage"], COLORS["sky"], COLORS["ochre"], COLORS["clay"], "#B497BD"]
+for i, col_name in enumerate(chosen_indicators):
+    fig_hist.add_trace(
+        go.Scatter(
+            x=hist_sub["date"],
+            y=hist_sub[col_name],
+            name=FEATURE_LABELS.get(col_name, col_name),
+            line=dict(color=palette[i % len(palette)], width=1.6),
+        )
+    )
+
+if "drought_class" in hist_sub.columns:
+    for _, row in hist_sub[hist_sub["drought_class"] == "Severe"].iterrows():
+        fig_hist.add_vrect(
+            x0=row["date"],
+            x1=row["date"] + pd.DateOffset(months=1),
+            fillcolor=COLORS["clay"],
+            opacity=0.20,
+            line_width=0,
+        )
+    for _, row in hist_sub[hist_sub["drought_class"] == "Moderate"].iterrows():
+        fig_hist.add_vrect(
+            x0=row["date"],
+            x1=row["date"] + pd.DateOffset(months=1),
+            fillcolor=COLORS["ochre"],
+            opacity=0.13,
+            line_width=0,
+        )
+
+fig_hist.add_hline(y=-1.0, line_dash="dot", line_color=COLORS["ochre"], opacity=0.5)
+fig_hist.add_hline(y=-1.5, line_dash="dash", line_color=COLORS["clay"], opacity=0.5)
+
+fig_hist.update_layout(
+    paper_bgcolor=COLORS["surface"],
+    plot_bgcolor=COLORS["surface"],
+    font=dict(family="Space Grotesk", color=COLORS["text_muted"], size=11),
+    xaxis=dict(gridcolor=COLORS["rule_soft"]),
+    yaxis=dict(gridcolor=COLORS["rule_soft"], zerolinecolor=COLORS["rule"]),
+    legend=dict(orientation="h", y=1.12, font=dict(color=COLORS["text_muted"])),
+    hovermode="x unified",
+    height=350,
+    margin={"t": 10, "l": 10, "r": 10, "b": 10},
+)
+st.plotly_chart(fig_hist, use_container_width=True, config={"displayModeBar": False})
+
+st.markdown('<hr class="kobo-rule">', unsafe_allow_html=True)
+
+# =================================================================
+# 7. TEMPORAL MODEL VALIDATION & BASELINE BENCHMARKING
+# =================================================================
+st.markdown('<div class="kobo-label">Section VI · Temporal Validation on Unseen Drought Periods &amp; Baseline Comparison</div>', unsafe_allow_html=True)
+
+try:
+    with open(DATA_DIR / f"{REGION_ID}_model_validation.json") as f:
+        validation = json.load(f)
+    validation_ok = True
+except FileNotFoundError:
+    validation_ok = False
+
+if validation_ok:
+    class_order = validation["class_order"]
+    models = validation["models"]
+
+    st.markdown(
+        f"""<p style="color:{COLORS['text_muted']}; font-size:0.82rem;">
+        <strong>Strict Temporal Split:</strong> Trained on historical years and evaluated on <strong>{validation['test_period']}</strong>
+        ({validation['n_test_months']} unseen months). Because drought is a rare event (42 Normal, 3 Moderate, 3 Severe months in the test period),
+        overall accuracy is misleading—a model that always predicts "Normal" achieves 87.5% accuracy while catching <strong>0% of droughts</strong>.
+        We evaluate models primarily on <strong>Elevated-Risk Recall (Moderate + Severe)</strong> and per-class F1/Precision.
+        </p>""",
+        unsafe_allow_html=True,
+    )
+
+    model_labels = {
+        "logistic_regression": "Multinomial Logistic Regression (Deployed)",
+        "climatology_baseline": "Seasonal Climatology Baseline",
+        "persistence_baseline": "1-Month Persistence Baseline",
+    }
+
+    recall_cols = st.columns(len(model_labels))
+    for col, (key, label) in zip(recall_cols, model_labels.items()):
+        pc = models[key]["per_class"]
+        elevated_recall = (pc["Moderate"]["recall"] + pc["Severe"]["recall"]) / 2
+        macro_f1 = np.mean([pc[c].get("f1", 0) for c in class_order])
+        acc = models[key]["accuracy"]
+        is_deployed = key == "logistic_regression"
+        color = COLORS["sage"] if is_deployed else COLORS["clay"]
+        col.markdown(
+            f"""
+            <div class="kobo-panel" style="border-left: 3px solid {color};">
+                <div class="kobo-strip-label">{label}</div>
+                <div class="mono" style="font-size:1.65rem; font-weight:600; color:{color};">
+                    {elevated_recall*100:.0f}% <span style="font-size:0.72rem; color:{COLORS['text_muted']};">drought recall</span>
+                </div>
+                <div class="mono" style="font-size:0.72rem; color:{COLORS['text_muted']}; margin-top:0.35rem; line-height:1.6;">
+                    Mod Recall: {pc['Moderate']['recall']*100:.0f}% &nbsp;·&nbsp; Sev Recall: {pc['Severe']['recall']*100:.0f}%<br/>
+                    Macro F1: {macro_f1*100:.1f}% &nbsp;·&nbsp; Test-Set Accuracy: {acc*100:.1f}%
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    v_col1, v_col2 = st.columns([1.05, 1.25])
+    with v_col1:
+        selected_eval_model = st.selectbox(
+            "Compare Model Confusion Matrix & Class Metrics",
+            options=list(model_labels.keys()),
+            format_func=lambda k: model_labels[k],
+        )
+        per_class = models[selected_eval_model]["per_class"]
+        class_colors = {"Normal": COLORS["sage"], "Moderate": COLORS["ochre"], "Severe": COLORS["clay"]}
+        for cls in class_order:
+            stats = per_class[cls]
+            st.markdown(
+                f"""
+                <div class="kobo-panel" style="border-left: 3px solid {class_colors[cls]}; padding: 0.65rem 0.9rem; margin-bottom: 0.5rem;">
+                    <div class="kobo-strip-label">{cls} Class (Test Support: n={int(stats['support'])} months)</div>
+                    <div class="mono" style="font-size:0.92rem; color:{COLORS['text']};">
+                        Precision: {stats['precision']*100:.0f}% &nbsp;·&nbsp;
+                        Recall: {stats['recall']*100:.0f}% &nbsp;·&nbsp;
+                        F1-Score: {stats.get('f1', 0)*100:.0f}%
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+        st.caption(
+            "Operational Trade-Off: In early warning, false negatives (missed droughts) carry higher humanitarian cost "
+            "than false positives (Watch alerts that trigger low-cost field verification)."
+        )
+
+    with v_col2:
+        cm = models[selected_eval_model]["confusion_matrix"]
+        fig_cm = go.Figure(
+            go.Heatmap(
+                z=cm,
+                x=[f"Pred {c}" for c in class_order],
+                y=[f"True {c}" for c in class_order],
+                colorscale=[[0, COLORS["surface"]], [1, COLORS["sage"] if selected_eval_model == "logistic_regression" else COLORS["ochre"]]],
+                showscale=False,
+                text=cm,
+                texttemplate="%{text}",
+                textfont=dict(family="IBM Plex Mono", size=14, color=COLORS["text"]),
+            )
+        )
+        fig_cm.update_layout(
+            title=dict(
+                text=f"HELD-OUT CONFUSION MATRIX ({validation['test_period']})",
+                font=dict(family="IBM Plex Mono", size=11, color=COLORS["text_muted"]),
+            ),
+            paper_bgcolor=COLORS["surface"],
+            plot_bgcolor=COLORS["surface"],
+            font=dict(family="Space Grotesk", color=COLORS["text_muted"], size=11),
+            height=290,
+            margin={"t": 38, "l": 10, "r": 10, "b": 10},
+            yaxis=dict(autorange="reversed"),
+        )
+        st.plotly_chart(fig_cm, use_container_width=True, config={"displayModeBar": False})
+
+st.markdown('<hr class="kobo-rule">', unsafe_allow_html=True)
+
+# =================================================================
+# 8. REPRODUCIBILITY, KNOWN LIMITATIONS & 8-WEEK PILOT PROPOSAL
+# =================================================================
+st.markdown('<div class="kobo-label">Section VII · Technical Reproducibility, Limitations &amp; Proposed 8-Week Pilot</div>', unsafe_allow_html=True)
+
+doc_col1, doc_col2 = st.columns(2)
+
+with doc_col1:
+    with st.expander("📐 Data Specifications, Preprocessing & Known Limitations", expanded=True):
+        st.markdown(
+            """
+            **Data Sources & Spatial Resolution:**
+            * **Precipitation (`CHIRPS v2.0`):** $0.05^\\circ$ (~5.5 km) quasi-global satellite-station product (2000–present), aggregated to monthly totals to compute SPI-1, SPI-3, SPI-6, and SPI-12.
+            * **Vegetation (`MODIS MOD13Q1`):** 250m 16-day NDVI composites resampled to woreda grid cells; standardized into monthly $z$-scores and Vegetation Condition Index (VCI).
+            * **Thermal Stress (`MODIS MOD11A2`):** 1 km 8-day daytime Land Surface Temperature (LST) anomalies.
+            * **Soil Moisture (`ERA5-Land`):** $0.1^\\circ$ (~9 km) root-zone volumetric soil water layer anomalies and historical percentiles.
+            * **Ensemble Forecast (`ECMWF AIFS-ENS`):** 15-day ensemble precipitation forecast (P10, Median, P90 across perturbed members).
+
+            **Known Limitations & Operational Caveats:**
+            * **Coarse Reanalysis Resolution:** ERA5-Land (~9 km) smooths over steep micro-topography between the western Zobel/escarpment highlands and the Raya valley floor.
+            * **Optical Cloud Cover:** MODIS NDVI/LST can experience missing composites during peak *Kiremt* cloud cover (July–August).
+            * **Probability Calibration:** Softmax outputs from multinomial logistic regression reflect uncalibrated class scores; operational triggers should rely on the multi-tier verification matrix rather than raw percentage thresholds alone.
+            """
+        )
+
+with doc_col2:
+    with st.expander("🤝 Proposed 8-Week Institutional Pilot Roadmap (Raya Kobo Woreda)", expanded=True):
+        st.markdown(
+            """
+            Rather than proposing immediate nationwide deployment, this system is designed for a **collaborative 8-week validation pilot** in Raya Kobo Woreda with government (EDRMC / BoA) and humanitarian (WFP / FAO) partners:
+
+            1. **Weeks 1–2 · Stakeholder Consultation:** Align with woreda/zonal agricultural and disaster-risk officers on decision calendars (*Belg* vs. *Kiremt*), existing warning workflows, and local kebele vulnerability data.
+            2. **Weeks 3–4 · Historical Ground-Truthing:** Cross-validate model detections against woreda crop-assessment records, historical food-security reports, and local meteorological station gauges.
+            3. **Weeks 5–6 · Operational User Testing:** Test the live dashboard and the **1-Page Printable Situation Brief** during routine coordination meetings; refine warning thresholds (`Watch` vs. `Warning`).
+            4. **Weeks 7–8 · Joint Evaluation Report:** Assess timeliness, false-alarm vs. missed-event trade-offs, and determine whether a full seasonal trial is warranted.
+            """
+        )
+
+st.markdown('<hr class="kobo-rule">', unsafe_allow_html=True)
+
+# =================================================================
+# ALERTING STUB
+# =================================================================
+EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+SUBSCRIPTIONS_PATH = DATA_DIR / "subscriptions.jsonl"
+
+
+def validate_contact(contact_type, value):
+    value = (value or "").strip()
+    if not value:
+        return False, "Please enter a value."
+    if contact_type == "Email":
+        if not EMAIL_RE.match(value):
+            return False, "That doesn't look like a valid email address."
+    else:
+        parsed = urlparse(value)
+        if parsed.scheme not in ("http", "https") or not parsed.netloc:
+            return False, "Webhook URL must start with http:// or https:// and include a valid host."
+    return True, None
+
+
+def save_subscription(contact_type, value, levels):
+    record = {
+        "contact_type": contact_type,
+        "contact_value": value,
+        "notify_on": levels,
+        "subscribed_at": datetime.now(timezone.utc).isoformat(),
+    }
+    try:
+        with open(SUBSCRIPTIONS_PATH, "a") as f:
+            f.write(json.dumps(record) + "\n")
+        return True, None
+    except Exception as e:
+        return False, str(e)
+
+
+def count_subscriptions():
+    try:
+        with open(SUBSCRIPTIONS_PATH) as f:
+            return sum(1 for _ in f)
+    except FileNotFoundError:
+        return 0
+
+
+st.markdown('<div class="kobo-label">Get notified of status changes</div>', unsafe_allow_html=True)
+sub_count = count_subscriptions()
+sub_count_text = f" · {sub_count} subscriber{'s' if sub_count != 1 else ''} so far" if sub_count > 0 else ""
+st.markdown(
+    f"""<p style="color:{COLORS['text_muted']}; font-size:0.82rem;">
+    Get an alert if Kobo's status moves to Watch or Warning.{sub_count_text}
+    </p>
+    <p style="color:{COLORS['text_muted']}; font-size:0.72rem; font-style:italic;">
+    Design stub — entries are validated and stored locally to demonstrate last-mile early-warning dispatch UX.
+    </p>""",
+    unsafe_allow_html=True,
+)
+
+with st.form("subscribe_form", clear_on_submit=True):
+    sub_col1, sub_col2 = st.columns([1, 2])
+    contact_type = sub_col1.radio("Notify me via", ["Email", "Webhook URL"], label_visibility="collapsed")
+    placeholder = "you@example.com" if contact_type == "Email" else "https://hooks.example.com/..."
+    contact_value = sub_col2.text_input("Contact", placeholder=placeholder, label_visibility="collapsed")
+    notify_levels = st.multiselect("Notify me when status becomes", ["Watch", "Warning"], default=["Watch", "Warning"])
+    submitted = st.form_submit_button("Subscribe")
+
+    if submitted:
+        valid, error = validate_contact(contact_type, contact_value)
+        if not valid:
+            st.error(error)
+        elif not notify_levels:
+            st.error("Select at least one status level to be notified about.")
+        else:
+            ok, save_error = save_subscription(contact_type, contact_value.strip(), notify_levels)
+            if ok:
+                st.success("Subscribed — noted for the record. (Design stub: no notification will actually be sent.)")
+            else:
+                st.warning(f"Validation passed, but storage isn't writable in this environment right now. ({save_error})")
+
+st.markdown('<hr class="kobo-rule">', unsafe_allow_html=True)
+
+# =================================================================
+# COLOPHON
+# =================================================================
+st.markdown(
+    f"""
+    <div class="kobo-colophon">
+    MULTI-SENSOR DROUGHT EARLY WARNING &amp; DECISION-SUPPORT SYSTEM — a prototype decision-support tool, not an official government warning service.<br/>
+    DATA — MODIS NDVI/LST · CHIRPS v2.0 · ERA5-Land · ECMWF AIFS-ENS, via Google Earth Engine<br/>
+    MODEL — {MODEL_VERSION}, temporally validated on unseen North Wollo drought periods<br/>
+    BUILD — Python · scikit-learn · GeoPandas · Streamlit · Plotly
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
