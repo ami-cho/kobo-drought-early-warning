@@ -764,3 +764,4 @@ protocols = [
         "crops": "Conduct field spot-checks on sorghum/teff moisture stress; advise on tie-ridging & moisture conservation.",
         "livestock": "Assess browse and forage deficits in eastern lowland grazing corridors.",
     }
+]
