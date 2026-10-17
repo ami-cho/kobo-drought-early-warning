@@ -1318,4 +1318,4 @@ with tab_ts:
         Shaded bands mark classified drought months (clay = Severe, ochre = Moderate). Drag the bottom range-slider
         to zoom into specific Belg (Feb–May) or Kiremt (Jun–Sep) agricultural seasons.
         </p>""",
-        unsafe_allow_html=True,
+        unsafe_allow_html=True,)
