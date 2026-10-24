@@ -13,7 +13,7 @@
   "ndvi_date": "2026-09-30",
   "lst_date": "2026-10-08",
   "rain_soil_date": "2026-09-24",
-  "forecast_issued": "2026-10-24 06:00",
+  "forecast_issued": "2026-10-24 12:00",
   "current_vector": {
     "ndvi_anomaly_z": 1.1888676261126165,
     "vci": 87.2103413121446,
@@ -35,23 +35,23 @@
   },
   "forecast_windows": {
     "1_3": {
-      "median_mm": 15.0625,
-      "p10_mm": 8.96875,
-      "p90_mm": 26.40625,
+      "median_mm": 11.15625,
+      "p10_mm": 5.09375,
+      "p90_mm": 17.875,
       "pct_below_normal": 0.0,
       "n_members": 11
     },
     "4_7": {
-      "median_mm": 0.625,
-      "p10_mm": 0.21875,
-      "p90_mm": 1.6875,
+      "median_mm": 0.0625,
+      "p10_mm": -0.03125,
+      "p90_mm": 0.5,
       "pct_below_normal": 100.0,
       "n_members": 11
     },
     "8_15": {
-      "median_mm": 0.125,
-      "p10_mm": 0.03125,
-      "p90_mm": 0.28125,
+      "median_mm": 0.25,
+      "p10_mm": 0.0625,
+      "p90_mm": 0.53125,
       "pct_below_normal": 100.0,
       "n_members": 11
     }
@@ -88,7 +88,7 @@
       "value_z": -1.8998082994314607
     }
   ],
-  "computed_at": "2026-10-24 15:28 UTC",
-  "computed_at_iso": "2026-10-24T15:28:35Z",
+  "computed_at": "2026-10-24 20:19 UTC",
+  "computed_at_iso": "2026-10-24T20:19:33Z",
   "refresh_interval_seconds": 21600
 }
