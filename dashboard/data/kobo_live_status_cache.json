@@ -2,18 +2,18 @@
   "region_id": "kobo",
   "status": "Watch",
   "current_class": "Moderate",
-  "current_confidence": 0.8498663342325009,
+  "current_confidence": 0.8504094658485218,
   "class_probabilities": {
-    "Moderate": 0.8498663342325009,
-    "Normal": 0.1501334164321379,
-    "Severe": 2.493353611582807e-07
+    "Moderate": 0.8504094658485218,
+    "Normal": 0.14959028355790965,
+    "Severe": 2.5059356851078617e-07
   },
-  "forecast_pct_below_normal": 39.3939393939394,
-  "forecast_note": "Forecast uncertain \u2014 ensemble members split (39% below normal), no strong consensus either way",
+  "forecast_pct_below_normal": 45.45454545454546,
+  "forecast_note": "Forecast uncertain \u2014 ensemble members split (45% below normal), no strong consensus either way",
   "ndvi_date": "2026-09-30",
   "lst_date": "2026-10-16",
-  "rain_soil_date": "2026-09-03",
-  "forecast_issued": "2026-11-03 12:00",
+  "rain_soil_date": "2026-09-04",
+  "forecast_issued": "2026-11-03 18:00",
   "current_vector": {
     "ndvi_anomaly_z": 1.1888676261126165,
     "vci": 87.2103413121446,
@@ -27,7 +27,7 @@
     "soil_percentile": 0.0,
     "rain_anomaly_z_lag1": -1.087364553468543,
     "spi_1_lag1": -1.0492177057868028,
-    "spi_3_lag1": -1.4498466013161748,
+    "spi_3_lag1": -1.453377085473723,
     "soil_anomaly_z_lag1": -0.5278917460394509,
     "ndvi_anomaly_z_lag1": 1.3946443663471315,
     "lst_anomaly_z_lag1": -2.4784421614139402,
@@ -36,23 +36,23 @@
   "forecast_windows": {
     "1_3": {
       "median_mm": 0.03125,
-      "p10_mm": 0.0,
-      "p90_mm": 0.125,
+      "p10_mm": 0.015625,
+      "p90_mm": 0.09375,
       "pct_below_normal": 100.0,
       "n_members": 11
     },
     "4_7": {
-      "median_mm": 5.9375,
-      "p10_mm": 0.84375,
-      "p90_mm": 11.4375,
-      "pct_below_normal": 18.181818181818183,
+      "median_mm": 4.40625,
+      "p10_mm": 2.75,
+      "p90_mm": 9.3125,
+      "pct_below_normal": 9.090909090909092,
       "n_members": 11
     },
     "8_15": {
-      "median_mm": 16.84375,
-      "p10_mm": 7.90625,
-      "p90_mm": 26.1875,
-      "pct_below_normal": 0.0,
+      "median_mm": 13.09375,
+      "p10_mm": 1.28125,
+      "p90_mm": 21.09375,
+      "pct_below_normal": 27.27272727272727,
       "n_members": 11
     }
   },
@@ -88,7 +88,7 @@
       "value_z": -1.522501523927499
     }
   ],
-  "computed_at": "2026-11-03 22:58 UTC",
-  "computed_at_iso": "2026-11-03T22:58:36Z",
+  "computed_at": "2026-11-04 05:01 UTC",
+  "computed_at_iso": "2026-11-04T05:01:03Z",
   "refresh_interval_seconds": 21600
 }
