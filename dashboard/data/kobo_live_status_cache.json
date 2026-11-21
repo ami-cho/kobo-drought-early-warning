@@ -2,32 +2,32 @@
   "region_id": "kobo",
   "status": "Watch",
   "current_class": "Moderate",
-  "current_confidence": 0.9824090097876621,
+  "current_confidence": 0.9931169623543814,
   "class_probabilities": {
-    "Moderate": 0.9824090097876621,
-    "Normal": 0.017590976513307367,
-    "Severe": 1.3699030646138461e-08
+    "Moderate": 0.9931169623543814,
+    "Normal": 0.006883030285576585,
+    "Severe": 7.360042195867752e-09
   },
   "forecast_pct_below_normal": 33.333333333333336,
   "forecast_note": "Only 33% of ensemble members show below-normal rainfall \u2014 possible relief, monitor for improvement",
   "ndvi_date": "2026-10-16",
   "lst_date": "2026-11-01",
-  "rain_soil_date": "2026-09-20",
-  "forecast_issued": "2026-11-20 12:00",
+  "rain_soil_date": "2026-09-21",
+  "forecast_issued": "2026-11-20 18:00",
   "current_vector": {
     "ndvi_anomaly_z": 1.0866838134497296,
     "vci": 82.0139174856719,
-    "rainfall_mm": 26.693047845274954,
-    "rain_anomaly_z": -1.3310042494316814,
-    "spi_1": -1.4993726234733762,
+    "rainfall_mm": 18.363093854498022,
+    "rain_anomaly_z": -1.8626973379196226,
+    "spi_1": -2.400372945304339,
     "spi_3": -1.3221582695481133,
-    "spi_12": -1.576165259594984,
+    "spi_12": -1.581363780151071,
     "lst_anomaly_z": -2.37159797539295,
     "soil_anomaly_z": -1.330808396629814,
     "soil_percentile": 16.0,
-    "rain_anomaly_z_lag1": -1.9459109563885884,
-    "spi_1_lag1": -2.40379156525556,
-    "spi_3_lag1": -1.244669452330561,
+    "rain_anomaly_z_lag1": -1.8691437120294347,
+    "spi_1_lag1": -2.2531957173714634,
+    "spi_3_lag1": -1.1589684849032544,
     "soil_anomaly_z_lag1": -1.9124671712896055,
     "ndvi_anomaly_z_lag1": 1.1888676261126165,
     "lst_anomaly_z_lag1": -2.5716120647272085,
@@ -35,24 +35,24 @@
   },
   "forecast_windows": {
     "1_3": {
-      "median_mm": 0.65625,
-      "p10_mm": 0.4375,
-      "p90_mm": 2.0,
-      "pct_below_normal": 81.81818181818183,
+      "median_mm": 0.59375,
+      "p10_mm": 0.21875,
+      "p90_mm": 0.9375,
+      "pct_below_normal": 100.0,
       "n_members": 11
     },
     "4_7": {
-      "median_mm": 5.21875,
-      "p10_mm": 3.25,
-      "p90_mm": 12.1875,
-      "pct_below_normal": 9.090909090909092,
+      "median_mm": 8.53125,
+      "p10_mm": 5.59375,
+      "p90_mm": 13.3125,
+      "pct_below_normal": 0.0,
       "n_members": 11
     },
     "8_15": {
-      "median_mm": 22.9375,
-      "p10_mm": 10.28125,
-      "p90_mm": 44.78125,
-      "pct_below_normal": 9.090909090909092,
+      "median_mm": 16.40625,
+      "p10_mm": 13.46875,
+      "p90_mm": 27.3125,
+      "pct_below_normal": 0.0,
       "n_members": 11
     }
   },
@@ -60,7 +60,7 @@
     {
       "feature": "rain_anomaly_z",
       "coefficient": -1.273476673654897,
-      "value_z": -1.5165505760542237
+      "value_z": -2.139432004705943
     },
     {
       "feature": "ndvi_anomaly_z",
@@ -70,7 +70,7 @@
     {
       "feature": "rain_anomaly_z_lag1",
       "coefficient": -0.5197725945884922,
-      "value_z": -2.2305252640058106
+      "value_z": -2.14076355070479
     },
     {
       "feature": "lst_anomaly_z",
@@ -88,7 +88,7 @@
       "value_z": -1.5225015239274997
     }
   ],
-  "computed_at": "2026-11-20 23:43 UTC",
-  "computed_at_iso": "2026-11-20T23:43:56Z",
+  "computed_at": "2026-11-21 05:49 UTC",
+  "computed_at_iso": "2026-11-21T05:49:04Z",
   "refresh_interval_seconds": 21600
 }
